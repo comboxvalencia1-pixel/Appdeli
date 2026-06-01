@@ -11,14 +11,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
     <style>
         body { overflow: hidden; margin: 0; padding: 0; background: #e5e3df; font-family: sans-serif; }
         .glass-panel { background: rgba(10, 10, 11, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .leaflet-container { background: #0A0A0B; outline: none; }
     </style>
 </head>
 <body class="relative w-full h-[100dvh]">
 
-    <div id="map-wrapper" class="absolute inset-0 w-full h-full z-0"></div>
+    <div id="map-wrapper" class="absolute inset-0 w-full h-full z-0">
+        <div id="map-preview" class="w-full h-full z-0"></div>
+    </div>
 
     <div class="absolute top-0 w-full pointer-events-auto glass-panel px-3 pb-3 flex flex-col gap-2 rounded-b-3xl shadow-2xl shadow-black/50 z-[10000]" style="padding-top: env(safe-area-inset-top);">
         <div class="flex flex-col md:flex-row gap-2 w-full mt-1">
@@ -80,57 +85,267 @@
             </div>
         </div>
         <div class="flex gap-2 pointer-events-auto mx-auto w-full max-w-[340px] md:max-w-2xl">
-            <button onclick="enviarTraspasoAdmin()" class="w-1/2 bg-[#ff073a] py-3 md:py-4 md:text-sm rounded-xl font-black text-white shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Traspasar</button>
-            <button onclick="confirmarDeliveryAdminSheet()" class="w-1/2 bg-[#39ff14] py-3 md:py-4 md:text-sm rounded-xl font-black text-black shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Enviar</button>
+            <button onclick="alert('Funcionalidad de Traspaso en desarrollo')" class="w-1/2 bg-[#ff073a] py-3 md:py-4 md:text-sm rounded-xl font-black text-white shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Traspasar</button>
+            <button onclick="alert('Funcionalidad de Envío en desarrollo')" class="w-1/2 bg-[#39ff14] py-3 md:py-4 md:text-sm rounded-xl font-black text-black shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Enviar</button>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>
-        let isAdminDelivery = true; // Forzado a true ya que es su propia página
+        // ==========================================
+        // VARIABLES GLOBALES Y CONFIGURACIÓN INICIAL
+        // ==========================================
+        let map = null;
+        let userMarker = null;
+        let rutaLayer = null;
+        let marcadoresSedesMap = [];
+        let checkoutSede = null;
+        let isAdminDelivery = true; 
         let adminPendingLatLng = null;
+        let isEditingLocation = false;
         let isManualLocation = true;
+        let tarifaFinalCalculada = 0;
 
-        // Motor de sincronización
-        setInterval(() => {
-            const kmElem = document.getElementById('route-km');
-            const timeElem = document.getElementById('route-time');
-            const precioElem = document.getElementById('map-header-title');
+        // Base de Datos Simulada (Reemplazar luego con fetch a tu Google Sheet)
+        let db = {
+            sedes: [
+                { ID_SEDE: "1", NOMBRE_SEDE: "Naguanagua", COORDENADAS_SEDE: "10.2543,-68.0101", TARIFA_MINIMA: "1.5", TARIFA_POR_KM: "1" },
+                { ID_SEDE: "2", NOMBRE_SEDE: "Valencia, Av. Bolívar Norte", COORDENADAS_SEDE: "10.2200,-68.0000", TARIFA_MINIMA: "1.5", TARIFA_POR_KM: "1" }
+            ]
+        };
+
+        // Íconos SVG Personalizados para el Mapa
+        const redPinIcon = L.divIcon({ html: '<div style="width:24px;height:24px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow: 0 0 15px rgba(239,68,68,0.9);"></div>', className: 'bg-transparent', iconSize: [24, 24], iconAnchor: [12, 12] });
+        const greenDotIcon = L.divIcon({ html: '<div style="width:24px;height:24px;background:#39FF14;border-radius:50%;border:3px solid white;box-shadow: 0 0 15px rgba(57,255,20,0.9);"></div>', className: 'bg-transparent', iconSize: [24, 24], iconAnchor: [12, 12] });
+
+        // ==========================================
+        // INICIALIZACIÓN DEL MAPA
+        // ==========================================
+        function initLeafletMap() {
+            if (map) return;
+            const customRenderer = L.svg({ padding: 2.5 });
+            map = L.map('map-preview', { zoomControl: false, renderer: customRenderer }).setView([10.2543, -68.0101], 13);
             
-            const cajeraKm = document.getElementById('cajera-km');
-            const cajeraTiempo = document.getElementById('cajera-tiempo');
-            const cajeraTarifa = document.getElementById('cajera-tarifa');
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CARTO'
+            }).addTo(map);
+
+            checkoutSede = db.sedes[0];
+            dibujarSedesEnMapa();
             
-            if (kmElem && cajeraKm) cajeraKm.innerText = kmElem.textContent.trim() || "--";
-            if (timeElem && cajeraTiempo) cajeraTiempo.innerText = timeElem.textContent.trim() || "--";
-            if (precioElem && cajeraTarifa) {
-                const val = precioElem.textContent.trim();
-                cajeraTarifa.innerText = val.includes("CALCULANDO") ? "Calculando..." : (val || "--");
+            const selectSedeAdmin = document.getElementById('cajera-sede');
+            if (selectSedeAdmin) {
+                selectSedeAdmin.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" style="background-color: #1A1A1A; color: #FFFFFF;">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
+                selectSedeAdmin.value = checkoutSede.ID_SEDE;
             }
-        }, 150);
+        }
 
-        // PEGA AQUÍ EL RESTO DE FUNCIONES DEL ADMIN:
-        // - dibujarSedesEnMapa()
-        // - cambiarSedeAdmin()
-        // - activarPinAdmin()
-        // - aceptarPinAdmin()
-        // - cancelarPinAdmin()
-        // - actualizarCoordenadasManualAdmin()
-        // - obtenerZonaORS()
-        // - actualizarIconoCoordenadas()
-        // - accionCoordenadas()
-        // (No necesitas pegar la función initAdminDelivery() porque el HTML ya está construido).
+        // ==========================================
+        // FUNCIONES ADMIN Y UI
+        // ==========================================
+        function dibujarSedesEnMapa() {
+            if (!map || !db || !db.sedes) return;
+            marcadoresSedesMap.forEach(m => map.removeLayer(m));
+            marcadoresSedesMap = [];
 
-        document.addEventListener("DOMContentLoaded", () => {
-            // Lógica inicial para cargar el mapa y las sedes al abrir la página
-            if (typeof initLeafletMap === 'function') initLeafletMap();
+            db.sedes.forEach(s => {
+                const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+                const isSelected = checkoutSede && (String(s.ID_SEDE) === String(checkoutSede.ID_SEDE));
+                
+                const iconHtml = `
+                    <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative z-[400]" onclick="event.stopPropagation(); cambiarSedeAdmin('${s.ID_SEDE}')">
+                        <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${isSelected ? '' : 'scale-[0.85] brightness-75'}">
+                            <span class="material-symbols-outlined text-white" style="font-size: 22px;">storefront</span>
+                        </div>
+                        <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${isSelected ? '' : 'opacity-80 scale-[0.95]'}">
+                            <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+                        </div>
+                    </div>`;
+                    
+                const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+                marcadoresSedesMap.push(L.marker([sLat, sLng], { icon }).addTo(map));
+            });
+        }
+
+        function cambiarSedeAdmin(id) {
+            checkoutSede = db.sedes.find(s => String(s.ID_SEDE) === String(id)) || checkoutSede;
+            document.getElementById('cajera-sede').value = checkoutSede.ID_SEDE;
+            dibujarSedesEnMapa();
+
+            const coords = document.getElementById('cajera-coords').value;
+            if(coords) {
+                const [lat, lng] = coords.split(',').map(Number);
+                renderMapPosition(lat, lng, true); 
+            } else {
+                const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+                map.setView([sLat, sLng], 13);
+            }
+        }
+
+        // ==========================================
+        // CÁLCULO DE RUTAS Y PINES
+        // ==========================================
+        async function renderMapPosition(lat, lng) {
+            if(!checkoutSede) return;
+            const [sedeLat, sedeLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
             
-            setTimeout(() => {
-                const selectSedeAdmin = document.getElementById('cajera-sede');
-                if(db && db.sedes && selectSedeAdmin) {
-                    selectSedeAdmin.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" style="background-color: #1A1A1A; color: #FFFFFF;">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
+            if (userMarker) {
+                userMarker.setLatLng([lat, lng]);
+                userMarker.setIcon(redPinIcon);
+            } else {
+                userMarker = L.marker([lat, lng], { icon: redPinIcon }).addTo(map);
+            }
+
+            document.getElementById('cajera-tarifa').innerText = "Calculando...";
+            
+            // Usamos OSRM público como ruteo básico para pruebas
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sedeLng},${sedeLat};${lng},${lat}?overview=full&geometries=geojson`;
+            
+            try {
+                const res = await fetch(osrmUrl);
+                const data = await res.json();
+                
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    const distanceKm = route.distance / 1000;
+                    const durationMin = Math.ceil(route.duration / 60);
+
+                    const min = parseFloat(checkoutSede.TARIFA_MINIMA) || 1.5; 
+                    let rawPrice = distanceKm * (parseFloat(checkoutSede.TARIFA_POR_KM) || 1);
+                    tarifaFinalCalculada = Math.max(min, Math.floor(rawPrice) + ((rawPrice % 1) >= 0.6 ? 1 : 0));
+
+                    document.getElementById('cajera-tarifa').innerText = `$${tarifaFinalCalculada.toFixed(2)}`;
+                    document.getElementById('cajera-km').innerText = `${distanceKm.toFixed(1)} km`;
+                    document.getElementById('cajera-tiempo').innerText = `${durationMin} min`;
+
+                    if (rutaLayer) map.removeLayer(rutaLayer);
+                    rutaLayer = L.geoJSON(route.geometry, { style: { color: '#39FF14', weight: 4, opacity: 0.8, dashArray: '8, 8' } }).addTo(map);
+                    
+                    map.fitBounds(rutaLayer.getBounds(), { padding: [40, 40] });
                 }
-                if (typeof dibujarSedesEnMapa === 'function') dibujarSedesEnMapa();
-            }, 1000);
+            } catch(e) {
+                document.getElementById('cajera-tarifa').innerText = "Error";
+            }
+        }
+
+        function activarPinAdmin() {
+            if(!map) return;
+            isEditingLocation = true;
+            document.getElementById('admin-pin-controls').style.display = 'flex';
+            if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
+            
+            const center = map.getCenter();
+            if (userMarker) { userMarker.setIcon(redPinIcon); userMarker.setLatLng(center); } 
+            else { userMarker = L.marker(center, {icon: redPinIcon}).addTo(map); }
+            
+            adminPendingLatLng = center;
+            window.adminMapMoveEvent = () => { if(isEditingLocation && userMarker) userMarker.setLatLng(map.getCenter()); };
+            window.adminMapMoveEndEvent = () => { if(isEditingLocation) adminPendingLatLng = map.getCenter(); };
+            
+            map.on('move', window.adminMapMoveEvent);
+            map.on('moveend', window.adminMapMoveEndEvent);
+        }
+
+        async function aceptarPinAdmin(manualLat = null, manualLng = null) {
+            isEditingLocation = false;
+            document.getElementById('admin-pin-controls').style.display = 'none';
+            map.off('move', window.adminMapMoveEvent);
+            map.off('moveend', window.adminMapMoveEndEvent);
+            
+            const lat = manualLat || (adminPendingLatLng ? adminPendingLatLng.lat : null);
+            const lng = manualLng || (adminPendingLatLng ? adminPendingLatLng.lng : null);
+            if(!lat || !lng) return;
+            
+            document.getElementById('cajera-coords').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            actualizarIconoCoordenadas();
+            await renderMapPosition(lat, lng);
+            await obtenerZonaORS(lat, lng);
+        }
+
+        function cancelarPinAdmin() {
+            isEditingLocation = false;
+            document.getElementById('admin-pin-controls').style.display = 'none';
+            map.off('move', window.adminMapMoveEvent);
+            map.off('moveend', window.adminMapMoveEndEvent);
+            
+            const coords = document.getElementById('cajera-coords').value;
+            if(coords) {
+                const [lat, lng] = coords.split(',').map(Number);
+                renderMapPosition(lat, lng);
+            } else {
+                if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+                if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
+            }
+        }
+
+        async function obtenerZonaORS(lat, lng) {
+            const inputZona = document.getElementById('cajera-zona');
+            inputZona.value = "Buscando...";
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+                const data = await res.json();
+                if (data && data.address) {
+                    let partes = [];
+                    if (data.address.road) partes.push(data.address.road);
+                    else if (data.address.neighbourhood) partes.push(data.address.neighbourhood);
+                    if (data.address.city || data.address.town) partes.push(data.address.city || data.address.town);
+                    if (partes.length > 0) { inputZona.value = partes.join(', '); return; }
+                }
+            } catch(e) {}
+            inputZona.value = "Ubicación fijada";
+        }
+
+        // ==========================================
+        // MANEJO DE INPUTS Y EVENTOS
+        // ==========================================
+        function actualizarIconoCoordenadas() {
+            const input = document.getElementById('cajera-coords');
+            const icon = document.getElementById('action-icon');
+            const btn = document.getElementById('btn-coords-action');
+            if (input.value.trim().length > 0) {
+                icon.innerText = 'close';
+                btn.classList.replace('bg-[#ff073a]/20', 'bg-red-500/20');
+                btn.classList.replace('text-[#ff073a]', 'text-red-500');
+            } else {
+                icon.innerText = 'edit';
+                btn.classList.replace('bg-red-500/20', 'bg-[#ff073a]/20');
+                btn.classList.replace('text-red-500', 'text-[#ff073a]');
+            }
+        }
+
+        function accionCoordenadas() {
+            const icon = document.getElementById('action-icon');
+            if (icon.innerText === 'close') {
+                document.getElementById('cajera-coords').value = '';
+                document.getElementById('cajera-zona').value = '';
+                document.getElementById('cajera-tarifa').innerText = '--';
+                document.getElementById('cajera-km').innerText = '--';
+                document.getElementById('cajera-tiempo').innerText = '--';
+                actualizarIconoCoordenadas();
+                if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+                if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
+                const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+                map.setView([sLat, sLng], 13);
+            } else {
+                activarPinAdmin();
+            }
+        }
+
+        async function actualizarCoordenadasManualAdmin(val) {
+            if(!val || val.trim() === '') return; 
+            const match = val.match(/[(]?\s*(-?\d+\.\d+)\s*[,;\s]+\s*(-?\d+\.\d+)\s*[)]?/);
+            if(match) {
+                document.getElementById('cajera-coords').blur(); 
+                await aceptarPinAdmin(parseFloat(match[1]), parseFloat(match[2])); 
+            } else {
+                alert("Formato inválido. Usa: Latitud, Longitud (ej: 10.254, -68.010)");
+            }
+        }
+
+        // Arrancar el mapa cuando el DOM esté listo
+        document.addEventListener("DOMContentLoaded", () => {
+            initLeafletMap();
         });
     </script>
 </body>
