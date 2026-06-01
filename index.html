@@ -1,1 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COMBOX Admin Delivery</title>
+    
+    <link rel="manifest" href="admin-manifest.json">
+    <meta name="theme-color" content="#ff073a">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
+    <style>
+        body { overflow: hidden; margin: 0; padding: 0; background: #e5e3df; font-family: sans-serif; }
+        .glass-panel { background: rgba(10, 10, 11, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="relative w-full h-[100dvh]">
 
+    <div id="map-wrapper" class="absolute inset-0 w-full h-full z-0"></div>
+
+    <div class="absolute top-0 w-full pointer-events-auto glass-panel px-3 pb-3 flex flex-col gap-2 rounded-b-3xl shadow-2xl shadow-black/50 z-[10000]" style="padding-top: env(safe-area-inset-top);">
+        <div class="flex flex-col md:flex-row gap-2 w-full mt-1">
+            <div class="flex flex-row gap-2 w-full md:w-[40%] items-center">
+                <button onclick="document.getElementById('extra-inputs').classList.toggle('hidden')" class="md:hidden p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white active:scale-95 transition-all flex-shrink-0">
+                    <span class="material-symbols-outlined text-[20px] block">menu</span>
+                </button>
+                
+                <div class="relative flex items-center flex-1">
+                    <span class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">storefront</span>
+                    <select id="cajera-sede" onchange="cambiarSedeAdmin(this.value)" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-2 py-2.5 text-white text-[11px] md:text-sm focus:outline-none uppercase font-bold appearance-none truncate"></select>
+                </div>
+
+                <div class="relative flex items-center flex-1">
+                    <span id="coord-icon" class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">explore</span>
+                    <input type="text" id="cajera-coords" placeholder="Coordenadas" onkeydown="if(event.key === 'Enter') actualizarCoordenadasManualAdmin(this.value)" oninput="actualizarIconoCoordenadas()" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-10 py-2.5 text-white text-[11px] md:text-sm focus:outline-none focus:border-[#ff073a] focus:ring-1 focus:ring-[#ff073a] truncate transition-all">
+                    
+                    <button id="btn-coords-action" onclick="accionCoordenadas()" class="absolute right-1 p-1.5 bg-[#ff073a]/20 rounded-lg text-[#ff073a] hover:bg-[#ff073a]/40 active:scale-95 transition-all z-20">
+                        <span id="action-icon" class="material-symbols-outlined text-[16px] md:text-[20px] block">edit</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="extra-inputs" class="hidden md:flex flex-col md:flex-row gap-2 w-full md:w-[60%]">
+                <div class="relative flex items-center w-full md:w-1/3">
+                    <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">person</span>
+                    <input type="text" id="cajera-name" placeholder="Nombre de Cliente" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
+                </div>
+                <div class="relative flex items-center w-full md:w-1/3">
+                    <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">call</span>
+                    <input type="tel" id="cajera-phone" placeholder="Teléfono" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
+                </div>
+                <div class="relative flex items-center w-full md:w-1/3">
+                    <span class="material-symbols-outlined absolute left-2.5 text-[#39FF14] text-[16px] pointer-events-none">location_on</span>
+                    <input type="text" id="cajera-zona" placeholder="Zona" readonly class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-[#39FF14] text-[11px] md:text-sm font-bold focus:outline-none cursor-not-allowed text-center truncate">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-pin-controls" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 flex gap-3 pointer-events-auto z-[10001]" style="display:none;">
+        <button onclick="cancelarPinAdmin()" class="bg-red-600 text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Cancelar</button>
+        <button onclick="aceptarPinAdmin()" class="bg-[#ff073a] text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Aceptar</button>
+    </div>
+
+    <div class="absolute bottom-0 w-full pointer-events-none px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2 md:gap-4 md:mb-4 z-[10000]">
+        <div class="flex gap-2 mx-auto w-full max-w-[340px] md:max-w-2xl">
+            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center shadow-lg">
+                <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Tiempo</p>
+                <span id="cajera-tiempo" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
+            </div>
+            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center shadow-lg">
+                <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Distancia</p>
+                <span id="cajera-km" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
+            </div>
+            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center border-[#39ff14]/30 shadow-lg" style="border-width: 1px;">
+                <p class="text-[8px] md:text-[10px] uppercase text-[#39ff14] font-bold tracking-wider">Tarifa</p>
+                <span id="cajera-tarifa" class="text-white font-black text-[11px] md:text-base truncate block px-1">--</span>
+            </div>
+        </div>
+        <div class="flex gap-2 pointer-events-auto mx-auto w-full max-w-[340px] md:max-w-2xl">
+            <button onclick="enviarTraspasoAdmin()" class="w-1/2 bg-[#ff073a] py-3 md:py-4 md:text-sm rounded-xl font-black text-white shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Traspasar</button>
+            <button onclick="confirmarDeliveryAdminSheet()" class="w-1/2 bg-[#39ff14] py-3 md:py-4 md:text-sm rounded-xl font-black text-black shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        let isAdminDelivery = true; // Forzado a true ya que es su propia página
+        let adminPendingLatLng = null;
+        let isManualLocation = true;
+
+        // Motor de sincronización
+        setInterval(() => {
+            const kmElem = document.getElementById('route-km');
+            const timeElem = document.getElementById('route-time');
+            const precioElem = document.getElementById('map-header-title');
+            
+            const cajeraKm = document.getElementById('cajera-km');
+            const cajeraTiempo = document.getElementById('cajera-tiempo');
+            const cajeraTarifa = document.getElementById('cajera-tarifa');
+            
+            if (kmElem && cajeraKm) cajeraKm.innerText = kmElem.textContent.trim() || "--";
+            if (timeElem && cajeraTiempo) cajeraTiempo.innerText = timeElem.textContent.trim() || "--";
+            if (precioElem && cajeraTarifa) {
+                const val = precioElem.textContent.trim();
+                cajeraTarifa.innerText = val.includes("CALCULANDO") ? "Calculando..." : (val || "--");
+            }
+        }, 150);
+
+        // PEGA AQUÍ EL RESTO DE FUNCIONES DEL ADMIN:
+        // - dibujarSedesEnMapa()
+        // - cambiarSedeAdmin()
+        // - activarPinAdmin()
+        // - aceptarPinAdmin()
+        // - cancelarPinAdmin()
+        // - actualizarCoordenadasManualAdmin()
+        // - obtenerZonaORS()
+        // - actualizarIconoCoordenadas()
+        // - accionCoordenadas()
+        // (No necesitas pegar la función initAdminDelivery() porque el HTML ya está construido).
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lógica inicial para cargar el mapa y las sedes al abrir la página
+            if (typeof initLeafletMap === 'function') initLeafletMap();
+            
+            setTimeout(() => {
+                const selectSedeAdmin = document.getElementById('cajera-sede');
+                if(db && db.sedes && selectSedeAdmin) {
+                    selectSedeAdmin.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" style="background-color: #1A1A1A; color: #FFFFFF;">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
+                }
+                if (typeof dibujarSedesEnMapa === 'function') dibujarSedesEnMapa();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
