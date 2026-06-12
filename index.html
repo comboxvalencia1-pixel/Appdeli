@@ -354,19 +354,7 @@
         </div>
 
 
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('jw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito');
-                })
-                .catch(error => {
-                    console.log('Fallo en el registro del ServiceWorker:', error);
-                });
-        });
-    }
-</script>
+
 <div class="modal" id="install-modal">
     <div class="modal-overlay" onclick="toggleModal('install-modal', false)"></div>
     <div class="modal-content flex flex-col max-h-[85vh] p-6 pb-8 glass-contour" style="background: #0A0A0B;">
@@ -599,7 +587,6 @@
 </div>
 <script src="misZonasGeoJSON.js"></script>
 
-</script>
 <div class="modal" id="scanner-modal">
     <div class="modal-overlay" onclick="closeScannerModal()"></div>
     <div class="modal-content flex flex-col items-center p-6 text-center glass-contour mx-4" style="background: #0A0A0B; max-width: 350px; margin: auto;">
@@ -679,14 +666,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
