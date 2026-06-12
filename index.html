@@ -1,352 +1,692 @@
 <!DOCTYPE html>
-<html lang="es">
+<html class="dark" lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>COMBOX Admin Delivery</title>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+    <title>Combox - Menú</title>
     
-    <link rel="manifest" href="admin-manifest.json">
-    <meta name="theme-color" content="#ff073a">
+    <link id="pwa-manifest" rel="manifest" href="manifest.json">
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
-    <style>
-        body { overflow: hidden; margin: 0; padding: 0; background: #e5e3df; font-family: sans-serif; }
-        .glass-panel { background: rgba(10, 10, 11, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .leaflet-container { background: #0A0A0B; outline: none; }
-    </style>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#E30613" />
+
+    <script src="tailwind-engine.js"></script>
+
+    <script src="tailwind-config.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-omnivore/0.3.4/leaflet-omnivore.min.js"></script>
+
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;display=block" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&amp;display=swap" rel="stylesheet"/>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="relative w-full h-[100dvh]">
 
-    <div id="map-wrapper" class="absolute inset-0 w-full h-full z-0">
-        <div id="map-preview" class="w-full h-full z-0"></div>
+<body class="pb-32" oncontextmenu="return false;">
+
+<div id="update-toast" class="fixed top-1/2 left-1/2 w-[85%] max-w-xs bg-black/80 backdrop-blur-xl border border-white/10 text-white p-6 rounded-[2rem] shadow-2xl z-[9999] transition-all duration-500 opacity-0 pointer-events-none flex flex-col items-center justify-center text-center" style="transform: translate(-50%, -50%) scale(0.9);">
+    <span class="material-symbols-outlined text-[48px] mb-3 animate-spin text-white">sync</span>
+    <span class="text-[13px] font-[900] uppercase tracking-widest leading-tight">Actualizando<br>datos nuevos...</span>
+</div>
+
+<div id="pwa-install-banner" onclick="toggleModal('install-modal', true, renderInstallModal)" class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-primary text-white p-4 rounded-3xl shadow-2xl z-[9999] flex items-center justify-between transition-transform duration-500 translate-y-[200%] border border-white/20 glass-contour-thin cursor-pointer">
+    <div class="flex items-center gap-3 pointer-events-none">
+        <span class="material-symbols-outlined text-3xl drop-shadow-md">app_shortcut</span>
+        <div class="flex flex-col">
+            <span class="font-black text-[13px] uppercase tracking-widest leading-none drop-shadow-md">Instalar Combox</span>
+            <span class="text-[9px] font-bold opacity-90 mt-1">Mejor rendimiento y acceso directo</span>
+        </div>
     </div>
+    <div class="flex items-center gap-2">
+        <button onclick="event.stopPropagation(); hidePwaInstall()" class="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white active:scale-90 flex-shrink-0"><span class="material-symbols-outlined text-sm">close</span></button>
+        <button id="pwa-install-btn" class="bg-white text-primary font-black px-4 py-2.5 rounded-full text-[10px] uppercase shadow-lg active:scale-95 transition-transform flex-shrink-0 pointer-events-none">Instalar</button>
+    </div>
+</div>
 
-    <div class="absolute top-0 w-full pointer-events-auto glass-panel px-3 pb-3 flex flex-col gap-2 rounded-b-3xl shadow-2xl shadow-black/50 z-[10000]" style="padding-top: env(safe-area-inset-top);">
-        <div class="flex flex-col md:flex-row gap-2 w-full mt-1">
-            <div class="flex flex-row gap-2 w-full md:w-[40%] items-center">
-                <button onclick="document.getElementById('extra-inputs').classList.toggle('hidden')" class="md:hidden p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white active:scale-95 transition-all flex-shrink-0">
-                    <span class="material-symbols-outlined text-[20px] block">menu</span>
+<div class="absolute top-0 left-0 w-full z-[100] pt-2 flex justify-center pointer-events-none" style="padding-top: calc(0.5rem + env(safe-area-inset-top));">
+    <div class="flex items-center gap-2 md:gap-3 px-3 py-1.5 pointer-events-auto btn-solido-oscuro rounded-full border border-white/10 shadow-lg">
+        <button onclick="toggleModal('sugerencias-modal', true)" class="bg-transparent text-white/90 text-[9px] md:text-[10px] font-medium uppercase tracking-[0.15em] active:scale-95 transition-transform flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-white">lightbulb</span> Sugerencias
+        </button>
+        <span class="text-white/30 text-[10px] md:text-[12px] font-light">|</span>
+        <button onclick="toggleModal('empleo-modal', true)" class="bg-transparent text-white/90 text-[9px] md:text-[10px] font-medium uppercase tracking-[0.15em] active:scale-95 transition-transform flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px] text-white">work</span> Currículum
+        </button>
+        <span class="text-white/30 text-[10px] md:text-[12px] font-light" id="top-nav-app-separator">|</span>
+        <button id="top-nav-app-btn" onclick="toggleModal('install-modal', true, renderInstallModal)" class="bg-transparent text-white/90 text-[9px] md:text-[10px] font-medium uppercase tracking-[0.15em] active:scale-95 transition-transform flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px] text-white">download</span> App
+        </button>
+    </div>
+</div>
+
+<div id="ptr-container" class="fixed top-0 left-0 w-full flex justify-center items-start pt-6 h-24 z-[110] pointer-events-none transition-transform duration-300" style="transform: translateY(-100%); will-change: transform;">
+    <div class="bg-black/60 backdrop-blur-xl border border-white/20 text-white rounded-full px-5 py-2.5 flex items-center gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+        <span class="material-symbols-outlined text-primary text-[20px] transition-transform" id="ptr-icon">sync</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-zinc-200" id="ptr-text">Estira más para actualizar</span>
+    </div>
+</div>
+
+<div id="splash">
+    <div class="pulse-logo">COMBOX</div>
+</div>
+
+<header class="relative pb-16 px-6 overflow-hidden rounded-b-[60px]" style="padding-top: calc(4.5rem + env(safe-area-inset-top)); background-color: #E30613;">
+    <div id="header-rain-bg" class="absolute inset-0 overflow-hidden pointer-events-none rounded-b-[60px] z-0"></div>
+    <div class="absolute inset-0 opacity-40 rounded-b-[60px]" style="background: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.6), transparent 75%);"></div>
+    <div class="relative z-10 flex flex-col items-center text-center">
+        <span class="text-white/60 text-[11px] font-bold tracking-[0.3em] uppercase mb-2" id="current-location-label">Cargando sede...</span>
+        <h1 class="text-white font-[900] text-6xl md:text-8xl tracking-tighter leading-none mb-3 drop-shadow-lg cursor-pointer active:scale-95 transition-transform" onclick="triggerFoodRain()">COMBOX</h1>
+        <div class="flex items-center gap-2 px-4 py-1.5">
+            <span id="header-status-dot" class="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+            <span id="header-status-text" class="text-white/90 text-[10px] font-bold uppercase tracking-wider drop-shadow-md">Consultando...</span>
+        </div>
+    </div>
+    <div id="header-rain-fg" class="absolute inset-0 overflow-hidden pointer-events-none rounded-b-[60px] z-20"></div>
+</header>
+
+<div class="relative -mt-8 px-4 z-20 max-content-width">
+    <div class="flex overflow-x-auto hide-scrollbar py-2 justify-center gap-2 md:gap-4 px-2 w-full mx-auto nav-container" style="max-width: fit-content;">
+        
+        <div class="flex flex-col items-center gap-2 min-w-[65px] nav-col" onclick="toggleSedesModal(true)">
+            <div class="w-14 h-14 flex-shrink-0 rounded-2xl btn-solido-rojo flex items-center justify-center text-white"><span class="material-symbols-outlined text-2xl leading-none m-0 p-0" style="color: #39FF14;">storefront</span></div>
+            <span class="text-[9px] nav-text font-bold uppercase tracking-widest text-zinc-400">SEDES</span>
+        </div>
+        
+        <div class="flex flex-col items-center gap-2 min-w-[65px] nav-col" onclick="openMapaModal()">
+            <div class="w-14 h-14 flex-shrink-0 rounded-2xl btn-solido-rojo flex items-center justify-center text-white"><span class="material-symbols-outlined text-2xl leading-none m-0 p-0">location_on</span></div>
+            <span class="text-[9px] nav-text font-bold uppercase tracking-widest text-zinc-400">Mapa</span>
+        </div>
+        
+        <div class="flex flex-col items-center gap-2 min-w-[65px] nav-col" onclick="openHorarioModal()">
+            <div class="w-14 h-14 flex-shrink-0 rounded-2xl btn-solido-rojo flex items-center justify-center text-white"><span class="material-symbols-outlined text-2xl leading-none m-0 p-0">schedule</span></div>
+            <span class="text-[9px] nav-text font-bold uppercase tracking-widest text-zinc-400">HORARIO</span>
+        </div>
+        
+       <div class="flex flex-col items-center gap-2 min-w-[65px] nav-col" onclick="toggleModal('chat-modal', true, renderChatModal)">
+            <div class="w-14 h-14 flex-shrink-0 rounded-2xl btn-solido-rojo flex items-center justify-center text-white">
+                <svg class="w-5 h-5 fill-white m-0 p-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <span class="text-[9px] nav-text font-bold uppercase tracking-widest text-zinc-400">CHAT</span>
+        </div>
+
+        <div class="flex flex-col items-center gap-2 min-w-[65px] nav-col" onclick="openInstagram()">
+           <div class="w-14 h-14 flex-shrink-0 rounded-2xl btn-solido-rojo flex items-center justify-center text-white">
+                <svg class="w-5 h-5 fill-current m-0 p-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.2 4.352 2.612 6.773 6.97 6.973 1.28.058 1.688.072 4.948.072 3.26 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.983.058-1.28.072-1.688.072-4.947s-.014-3.667-.072-4.947c-.2-4.361-2.624-6.777-6.983-6.97C15.668.014 15.26 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+            </div>
+            <span class="text-[9px] nav-text font-bold uppercase tracking-widest text-zinc-400">INSTAGRAM</span>
+        </div>
+
+    </div>
+</div>
+
+<div class="sticky z-50 px-4 mt-8" id="search-container" style="top: calc(1rem + env(safe-area-inset-top));">
+    <div class="flex flex-col items-center gap-3 max-w-2xl mx-auto island-width">
+        <div class="flex bg-[rgba(15,15,18,0.75)] backdrop-blur-xl p-1.5 rounded-full glass-contour-thin shadow-2xl" id="type-tabs-container">
+            <button class="type-tab type-tab-active" onclick="setType('Individual', this)">Individual</button>
+            <button class="type-tab type-tab-inactive" onclick="setType('Combos', this)">Combos</button>
+            <button class="type-tab type-tab-inactive" onclick="setType('Servicios', this)">Servicios</button>
+        </div>
+
+      <div class="w-full bg-[rgba(15,15,18,0.75)] backdrop-blur-xl rounded-full glass-contour-thin flex items-center px-4 shadow-2xl transition-all h-[54px]" id="search-island">
+    
+    <button id="search-action-btn" onclick="handleSearchClick()" class="text-zinc-400 mr-2 flex items-center justify-center outline-none active:scale-90 transition-all">
+        <span id="search-icon" class="material-symbols-outlined text-[22px]">search</span>
+    </button>
+
+    <button id="scan-action-btn" onclick="openScannerModal()" class="text-zinc-400 mr-2 flex items-center justify-center outline-none active:scale-90 transition-all">
+        <span class="material-symbols-outlined text-[22px]">qr_code_scanner</span>
+    </button>
+
+    <input class="flex-1 bg-transparent border-none py-2 text-[15px] text-white outline-none focus:ring-0 placeholder:text-zinc-500" id="global-search" oninput="onSearchInput()" onkeypress="handleSearchEnter(event)" placeholder="¿Qué buscas?" type="text"/>
+    
+    <button id="cat-menu-btn" class="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white active:scale-90 transition-all ml-2 flex-shrink-0" onclick="toggleCategoriesModal(true)">
+        <span class="material-symbols-outlined text-[20px]">menu</span>
+    </button>
+</div>
+    </div>
+</div>
+
+<section class="mt-10 px-4 max-content-width hidden" id="promo-section">
+    <div class="flex items-center justify-between mb-6 px-1">
+        <div class="flex items-center gap-3">
+            <div class="w-1.5 h-6 bg-orange-500 rounded-full"></div>
+
+            <h2 id="header-promociones" class="text-xl font-black text-white uppercase tracking-tight">PROMOCIONES 🔥</h2>
+
+        </div>
+    </div>
+    <div class="flex overflow-x-auto hide-scrollbar flex-nowrap overscroll-x-contain gap-4 px-1 pt-4 pb-4 scroll-smooth" id="promo-carousel"></div>
+</section>
+
+<div id="catalog-anchor" class="pt-4"></div>
+<main class="mt-4 px-4 space-y-12 max-content-width" id="catalog-grid"></main>
+
+<div class="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-[50%] w-[92%] max-w-md z-[100] order-island-hidden" id="order-island">
+    <div class="bg-[rgba(15,15,18,0.75)] backdrop-blur-xl border border-white/10 rounded-full p-1.5 flex items-center justify-between shadow-2xl island-width glass-contour-thin">
+        <div class="pl-6 flex flex-col relative z-10">
+            <span class="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Total Pedido</span>
+            <span class="font-black text-2xl text-white tracking-tighter" id="order-total">$0.00</span>
+        </div>
+        <button class="bg-primary text-white font-black px-6 py-3.5 rounded-full text-xs uppercase shadow-lg shadow-primary/40 active:scale-95 transition-transform tracking-widest relative z-10 flex items-center justify-center gap-2" onclick="toggleCartModal(true)">
+            <span class="material-symbols-outlined text-[18px]">shopping_cart</span> Ver Pedido
+        </button>
+    </div>
+</div>
+
+<div class="modal" id="custom-dialog-modal">
+    <div class="modal-overlay" onclick="closeCustomDialog()"></div>
+    <div class="modal-content glass-contour p-6 flex flex-col items-center text-center mx-4" style="max-width: 320px; margin: auto; background: #000000; backdrop-filter: blur(16px);">
+        <h3 class="text-white font-black text-xl uppercase tracking-widest mb-3" id="dialog-title">Aviso</h3>
+        <p class="text-zinc-300 text-sm mb-6 leading-relaxed font-medium" id="dialog-msg"></p>
+        <div class="flex gap-3 w-full" id="dialog-buttons"></div>
+    </div>
+</div>
+
+<div class="modal modal-bottom" id="cart-modal">
+    <div class="modal-overlay" onclick="toggleModal('cart-modal', false)"></div>
+    <div class="modal-content flex flex-col max-h-[90vh] md:max-h-[90vh] p-5 pt-3 glass-contour-top" style="background: #0A0A0B;">
+        <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4 flex-shrink-0"></div>
+        <div class="flex items-center justify-between mb-5">
+            
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h2 class="text-xl font-black text-white uppercase tracking-tighter">COMBOX</h2>
+            </div>
+            <div class="flex items-center gap-2 z-50">
+                <button type="button" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 relative" onclick="shareCartUrl()">
+                    <span class="material-symbols-outlined text-lg">ios_share</span>
                 </button>
-                
-                <div class="relative flex items-center flex-1">
-                    <span class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">storefront</span>
-                    <select id="cajera-sede" onchange="cambiarSedeAdmin(this.value)" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-2 py-2.5 text-white text-[11px] md:text-sm focus:outline-none uppercase font-bold appearance-none truncate"></select>
+                <button type="button" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 relative" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('cart-modal', false)">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto hide-scrollbar space-y-3 mb-5" id="cart-items-list"></div>
+        <div class="pt-5 border-t border-white/10 space-y-4">
+           <div class="flex justify-between items-end mb-1 mt-2">
+                <div class="flex flex-col gap-2">
+                    <span class="flex items-center gap-1.5 text-[11px] text-zinc-300 font-bold tracking-widest uppercase">
+                        <span class="material-symbols-outlined text-[14px]">account_balance</span> : <span id="tasa-bcv-display">0.00</span>
+                    </span>
+                    <span class="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Subtotal a pagar</span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-3xl font-black text-white tracking-tighter leading-none" id="cart-subtotal">$0.00</span>
+                    <span class="text-[12px] text-zinc-400 font-bold tracking-wider mt-1" id="cart-subtotal-bs">Bs 0,00</span>
+                </div>
+            </div>
+            
+           <div class="flex flex-col gap-3 mt-8 mb-2">
+                <button class="w-full bg-[#39FF14] text-black font-[900] py-4 rounded-2xl text-[13px] uppercase shadow-lg shadow-[#39FF14]/20 active:scale-[0.98] flex items-center justify-center gap-2" onclick="openMethodModal()">
+                    Confirmar Pedido
+                </button>
+            </div>
+
+            <button class="w-full py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest active:text-primary transition-colors" onclick="clearCart()">Vaciar Pedido</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal modal-bottom" id="method-modal">
+    <div class="modal-overlay" onclick="toggleModal('method-modal', false)"></div>
+    <div class="modal-content flex flex-col p-6 pb-8 glass-contour-top" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h2 class="text-xl font-black text-white uppercase tracking-tighter">Método de Entrega</h2>
+            </div>
+            <button type="button" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90" onclick="toggleModal('method-modal', false); setTimeout(() => toggleModal('cart-modal', true), 150);">
+                <span class="material-symbols-outlined text-lg">arrow_back</span>
+            </button>
+        </div>
+        <div class="flex flex-col gap-3">
+            <button class="w-full bg-neon-accent text-black font-[900] py-4 rounded-2xl text-[13px] uppercase shadow-lg shadow-neon-accent/20 active:scale-[0.98] flex items-center justify-center gap-2" onclick="openCheckoutModal('delivery')">
+                <span class="material-symbols-outlined text-[22px]">two_wheeler</span> Delivery
+            </button>
+            <button class="w-full bg-white/10 text-white font-[900] py-4 rounded-2xl text-[13px] uppercase border border-white/10 active:scale-[0.98] flex items-center justify-center gap-2" onclick="openCheckoutModal('pickup')">
+                <span class="material-symbols-outlined text-[22px]">storefront</span> Pick-Up
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="checkout-modal">
+    <div class="modal-overlay" onclick="closeCheckout()"></div>
+    <div class="modal-content flex flex-col max-h-[85vh] md:max-h-[85vh] p-6 pb-6 glass-contour" style="background: #0A0A0B;">
+        
+        <div class="flex items-center justify-between mb-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-neon-accent rounded-full" id="checkout-accent"></div>
+                <h2 class="text-2xl font-black text-white uppercase tracking-tighter" id="checkout-title">Datos</h2>
+            </div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); closeCheckout()">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-5 overflow-y-auto hide-scrollbar pb-6 flex-1 min-h-0" id="checkout-scroll-area">
+            
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Tu Nombre</label>
+                <input type="text" id="checkout-name" autocomplete="off" name="no-name-autofill" data-lpignore="true" spellcheck="false" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] placeholder:text-white/30 text-base" placeholder="Ej. Juan Pérez">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Tu Teléfono</label>
+                <input type="tel" id="checkout-phone" autocomplete="tel" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] placeholder:text-white/30 text-base" placeholder="Ej. 0424...">
+            </div>
+            
+            <div id="pickup-map-container" class="relative w-full rounded-3xl border border-white/10 overflow-hidden shadow-inner z-10 bg-[#0a0a0b] mt-6 mb-2" style="display:none; height: 350px; box-shadow: inset 0 -22px 0 0 #0a0a0b, 0 0 20px rgba(0,0,0,0.5);">
+                <div class="absolute top-3 left-4 z-[1000] pointer-events-none opacity-40">
+                    <span class="font-[900] text-white text-sm tracking-widest drop-shadow-md">COMBOX</span>
+                </div>
+                <div class="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 pointer-events-auto">
+                    <div class="relative group">
+                        <select class="checkout-sede-select bg-black/60 backdrop-blur-md border border-white/20 px-8 py-2.5 rounded-xl text-white font-black shadow-lg text-[10px] uppercase appearance-none outline-none focus:border-primary active:scale-95 transition-transform" onchange="updateCheckoutSede(this.value)"></select>
+                        <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-white pointer-events-none text-[14px]">expand_more</span>
+                    </div>
+                </div>
+                <div id="checkout-pickup-map" class="w-full h-full z-0"></div>
+            </div>
+            
+            <div id="checkout-location-container" class="flex flex-col gap-3">
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Ubicación de Entrega</label>
+
+                <div id="manual-location-wrapper" style="display:none;" class="flex flex-col gap-2 mb-2">
+                    <input type="text" id="checkout-location" autocomplete="off" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-white/20 text-sm" placeholder="Ej: Casa #12, frente al parque...">
+                    <p id="manual-location-hint" class="text-[9px] text-zinc-500 font-bold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[12px] text-primary">info</span> Puedes ajustar el pin en el mapa para mayor precisión.
+                    </p>
                 </div>
 
-                <div class="relative flex items-center flex-1">
-                    <span id="coord-icon" class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">explore</span>
-                    <input type="text" id="cajera-coords" placeholder="Coordenadas" onkeydown="if(event.key === 'Enter') actualizarCoordenadasManualAdmin(this.value)" oninput="actualizarIconoCoordenadas()" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-10 py-2.5 text-white text-[11px] md:text-sm focus:outline-none focus:border-[#ff073a] focus:ring-1 focus:ring-[#ff073a] truncate transition-all">
+                <div id="map-wrapper" class="relative w-full rounded-3xl overflow-hidden border border-white/10" style="display:none; height: 350px; box-shadow: inset 0 -22px 0 0 #0a0a0b, 0 0 20px rgba(0,0,0,0.5);">
+                    <div class="absolute top-3 left-4 z-[1000] pointer-events-none opacity-40">
+                        <span class="font-[900] text-white text-sm tracking-widest drop-shadow-md">COMBOX</span>
+                    </div>
+
+                    <div id="map-preview" class="w-full h-full bg-[#0a0a0b] z-0"></div>
                     
-                    <button id="btn-coords-action" onclick="accionCoordenadas()" class="absolute right-1 p-1.5 bg-[#ff073a]/20 rounded-lg text-[#ff073a] hover:bg-[#ff073a]/40 active:scale-95 transition-all z-20">
-                        <span id="action-icon" class="material-symbols-outlined text-[16px] md:text-[20px] block">edit</span>
+                    <button type="button" id="btn-confirm-pin" onclick="confirmManualPin()" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2000] bg-primary text-white font-black px-4 py-2 text-xs rounded-full shadow-2xl active:scale-95 transition-transform flex items-center gap-1.5 border border-white/20" style="display:none; margin-top: 40px;">
+                        Aceptar <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    </button>
+
+                   <div class="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 pointer-events-auto">
+                        <div class="relative group">
+                            <select class="checkout-sede-select bg-black/60 backdrop-blur-md border border-white/20 px-8 py-2 rounded-xl text-white font-black shadow-lg text-[9px] uppercase appearance-none outline-none focus:border-primary active:scale-95 transition-transform" onchange="updateCheckoutSede(this.value)"></select>
+                            <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-white pointer-events-none text-[14px]">expand_more</span>
+                        </div>
+                        <div class="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-white font-black shadow-lg text-[11px] uppercase flex items-center gap-2 pointer-events-none mt-1">
+                            <span class="material-symbols-outlined text-white text-[16px]">two_wheeler</span>
+                            <span id="map-header-title">--$</span>
+                        </div>
+                    </div>
+
+                    <div class="absolute bottom-3 right-3 z-[1000] flex flex-col gap-2 pointer-events-none items-end">
+                        <div class="bg-black/60 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl text-white font-black shadow-lg text-[10px] uppercase flex items-center justify-between min-w-[80px]">
+                            <span class="material-symbols-outlined text-[14px]">route</span> <span id="route-km">-- km</span>
+                        </div>
+                        <div class="bg-black/60 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl text-white font-black shadow-lg text-[10px] uppercase flex items-center justify-between min-w-[80px]">
+                            <span class="material-symbols-outlined text-[14px]">timer</span> <span id="route-time">-- min</span>
+                        </div>
+                    </div>
+
+                    <button type="button" id="btn-wrong-location" onclick="showManualLocationInput()" class="absolute bottom-3 left-3 z-[1000] w-10 h-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 shadow-lg transition-transform" style="display:none;">
+                        <span class="material-symbols-outlined text-[18px]">edit_location_alt</span>
+                    </button>
+
+                    <button type="button" onclick="event.preventDefault(); getLocation(true);" class="absolute bottom-14 left-3 z-[1000] w-10 h-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 shadow-lg transition-transform">
+                        <span class="material-symbols-outlined text-[18px]">my_location</span>
                     </button>
                 </div>
-            </div>
+            </div> 
 
-            <div id="extra-inputs" class="hidden md:flex flex-col md:flex-row gap-2 w-full md:w-[60%]">
-                <div class="relative flex items-center w-full md:w-1/3">
-                    <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">person</span>
-                    <input type="text" id="cajera-name" placeholder="Nombre de Cliente" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
-                </div>
-                <div class="relative flex items-center w-full md:w-1/3">
-                    <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">call</span>
-                    <input type="tel" id="cajera-phone" placeholder="Teléfono" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
-                </div>
-                <div class="relative flex items-center w-full md:w-1/3">
-                    <span class="material-symbols-outlined absolute left-2.5 text-[#39FF14] text-[16px] pointer-events-none">location_on</span>
-                    <input type="text" id="cajera-zona" placeholder="Zona" readonly class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-[#39FF14] text-[11px] md:text-sm font-bold focus:outline-none cursor-not-allowed text-center truncate">
-                </div>
-            </div>
+        </div> <div class="pt-4 border-t border-white/10 mt-auto flex-shrink-0 bg-[#0A0A0B] relative z-20">
+            <button type="button" id="checkout-submit-btn" class="w-full bg-neon-accent text-black font-[900] py-4 rounded-2xl text-sm uppercase shadow-lg shadow-neon-accent/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all" onclick="submitOrder()">
+                Solicitar Pedido <span class="material-symbols-outlined">send</span>
+            </button>
         </div>
-    </div>
 
-    <div id="admin-pin-controls" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 flex gap-3 pointer-events-auto z-[10001]" style="display:none;">
-        <button onclick="cancelarPinAdmin()" class="bg-red-600 text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Cancelar</button>
-        <button onclick="aceptarPinAdmin()" class="bg-[#ff073a] text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Aceptar</button>
-    </div>
 
-    <div class="absolute bottom-0 w-full pointer-events-none px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2 md:gap-4 md:mb-4 z-[10000]">
-        <div class="flex gap-2 mx-auto w-full max-w-[340px] md:max-w-2xl">
-            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center shadow-lg">
-                <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Tiempo</p>
-                <span id="cajera-tiempo" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
-            </div>
-            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center shadow-lg">
-                <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Distancia</p>
-                <span id="cajera-km" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
-            </div>
-            <div class="w-1/3 glass-panel rounded-xl py-1.5 md:py-3 text-center border-[#39ff14]/30 shadow-lg" style="border-width: 1px;">
-                <p class="text-[8px] md:text-[10px] uppercase text-[#39ff14] font-bold tracking-wider">Tarifa</p>
-                <span id="cajera-tarifa" class="text-white font-black text-[11px] md:text-base truncate block px-1">--</span>
-            </div>
-        </div>
-        <div class="flex gap-2 pointer-events-auto mx-auto w-full max-w-[340px] md:max-w-2xl">
-            <button onclick="alert('Funcionalidad de Traspaso en desarrollo')" class="w-1/2 bg-[#ff073a] py-3 md:py-4 md:text-sm rounded-xl font-black text-white shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Traspasar</button>
-            <button onclick="alert('Funcionalidad de Envío en desarrollo')" class="w-1/2 bg-[#39ff14] py-3 md:py-4 md:text-sm rounded-xl font-black text-black shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Enviar</button>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-    <script>
-        // ==========================================
-        // VARIABLES GLOBALES Y CONFIGURACIÓN INICIAL
-        // ==========================================
-        let map = null;
-        let userMarker = null;
-        let rutaLayer = null;
-        let marcadoresSedesMap = [];
-        let checkoutSede = null;
-        let isAdminDelivery = true; 
-        let adminPendingLatLng = null;
-        let isEditingLocation = false;
-        let isManualLocation = true;
-        let tarifaFinalCalculada = 0;
-
-        // Base de Datos Simulada (Reemplazar luego con fetch a tu Google Sheet)
-        let db = {
-            sedes: [
-                { ID_SEDE: "1", NOMBRE_SEDE: "Naguanagua", COORDENADAS_SEDE: "10.2543,-68.0101", TARIFA_MINIMA: "1.5", TARIFA_POR_KM: "1" },
-                { ID_SEDE: "2", NOMBRE_SEDE: "Valencia, Av. Bolívar Norte", COORDENADAS_SEDE: "10.2200,-68.0000", TARIFA_MINIMA: "1.5", TARIFA_POR_KM: "1" }
-            ]
-        };
-
-        // Íconos SVG Personalizados para el Mapa
-        const redPinIcon = L.divIcon({ html: '<div style="width:24px;height:24px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow: 0 0 15px rgba(239,68,68,0.9);"></div>', className: 'bg-transparent', iconSize: [24, 24], iconAnchor: [12, 12] });
-        const greenDotIcon = L.divIcon({ html: '<div style="width:24px;height:24px;background:#39FF14;border-radius:50%;border:3px solid white;box-shadow: 0 0 15px rgba(57,255,20,0.9);"></div>', className: 'bg-transparent', iconSize: [24, 24], iconAnchor: [12, 12] });
-
-        // ==========================================
-        // INICIALIZACIÓN DEL MAPA
-        // ==========================================
-        function initLeafletMap() {
-            if (map) return;
-            const customRenderer = L.svg({ padding: 2.5 });
-            map = L.map('map-preview', { zoomControl: false, renderer: customRenderer }).setView([10.2543, -68.0101], 13);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO'
-            }).addTo(map);
-
-            checkoutSede = db.sedes[0];
-            dibujarSedesEnMapa();
-            
-            const selectSedeAdmin = document.getElementById('cajera-sede');
-            if (selectSedeAdmin) {
-                selectSedeAdmin.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" style="background-color: #1A1A1A; color: #FFFFFF;">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
-                selectSedeAdmin.value = checkoutSede.ID_SEDE;
-            }
-        }
-
-        // ==========================================
-        // FUNCIONES ADMIN Y UI
-        // ==========================================
-        function dibujarSedesEnMapa() {
-            if (!map || !db || !db.sedes) return;
-            marcadoresSedesMap.forEach(m => map.removeLayer(m));
-            marcadoresSedesMap = [];
-
-            db.sedes.forEach(s => {
-                const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
-                const isSelected = checkoutSede && (String(s.ID_SEDE) === String(checkoutSede.ID_SEDE));
-                
-                const iconHtml = `
-                    <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative z-[400]" onclick="event.stopPropagation(); cambiarSedeAdmin('${s.ID_SEDE}')">
-                        <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${isSelected ? '' : 'scale-[0.85] brightness-75'}">
-                            <span class="material-symbols-outlined text-white" style="font-size: 22px;">storefront</span>
-                        </div>
-                        <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${isSelected ? '' : 'opacity-80 scale-[0.95]'}">
-                            <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
-                        </div>
-                    </div>`;
-                    
-                const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
-                marcadoresSedesMap.push(L.marker([sLat, sLng], { icon }).addTo(map));
-            });
-        }
-
-        function cambiarSedeAdmin(id) {
-            checkoutSede = db.sedes.find(s => String(s.ID_SEDE) === String(id)) || checkoutSede;
-            document.getElementById('cajera-sede').value = checkoutSede.ID_SEDE;
-            dibujarSedesEnMapa();
-
-            const coords = document.getElementById('cajera-coords').value;
-            if(coords) {
-                const [lat, lng] = coords.split(',').map(Number);
-                renderMapPosition(lat, lng, true); 
-            } else {
-                const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
-                map.setView([sLat, sLng], 13);
-            }
-        }
-
-        // ==========================================
-        // CÁLCULO DE RUTAS Y PINES
-        // ==========================================
-        async function renderMapPosition(lat, lng) {
-            if(!checkoutSede) return;
-            const [sedeLat, sedeLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
-            
-            if (userMarker) {
-                userMarker.setLatLng([lat, lng]);
-                userMarker.setIcon(redPinIcon);
-            } else {
-                userMarker = L.marker([lat, lng], { icon: redPinIcon }).addTo(map);
-            }
-
-            document.getElementById('cajera-tarifa').innerText = "Calculando...";
-            
-            // Usamos OSRM público como ruteo básico para pruebas
-            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sedeLng},${sedeLat};${lng},${lat}?overview=full&geometries=geojson`;
-            
-            try {
-                const res = await fetch(osrmUrl);
-                const data = await res.json();
-                
-                if (data.code === 'Ok' && data.routes.length > 0) {
-                    const route = data.routes[0];
-                    const distanceKm = route.distance / 1000;
-                    const durationMin = Math.ceil(route.duration / 60);
-
-                    const min = parseFloat(checkoutSede.TARIFA_MINIMA) || 1.5; 
-                    let rawPrice = distanceKm * (parseFloat(checkoutSede.TARIFA_POR_KM) || 1);
-                    tarifaFinalCalculada = Math.max(min, Math.floor(rawPrice) + ((rawPrice % 1) >= 0.6 ? 1 : 0));
-
-                    document.getElementById('cajera-tarifa').innerText = `$${tarifaFinalCalculada.toFixed(2)}`;
-                    document.getElementById('cajera-km').innerText = `${distanceKm.toFixed(1)} km`;
-                    document.getElementById('cajera-tiempo').innerText = `${durationMin} min`;
-
-                    if (rutaLayer) map.removeLayer(rutaLayer);
-                    rutaLayer = L.geoJSON(route.geometry, { style: { color: '#39FF14', weight: 4, opacity: 0.8, dashArray: '8, 8' } }).addTo(map);
-                    
-                    map.fitBounds(rutaLayer.getBounds(), { padding: [40, 40] });
-                }
-            } catch(e) {
-                document.getElementById('cajera-tarifa').innerText = "Error";
-            }
-        }
-
-        function activarPinAdmin() {
-            if(!map) return;
-            isEditingLocation = true;
-            document.getElementById('admin-pin-controls').style.display = 'flex';
-            if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
-            
-            const center = map.getCenter();
-            if (userMarker) { userMarker.setIcon(redPinIcon); userMarker.setLatLng(center); } 
-            else { userMarker = L.marker(center, {icon: redPinIcon}).addTo(map); }
-            
-            adminPendingLatLng = center;
-            window.adminMapMoveEvent = () => { if(isEditingLocation && userMarker) userMarker.setLatLng(map.getCenter()); };
-            window.adminMapMoveEndEvent = () => { if(isEditingLocation) adminPendingLatLng = map.getCenter(); };
-            
-            map.on('move', window.adminMapMoveEvent);
-            map.on('moveend', window.adminMapMoveEndEvent);
-        }
-
-        async function aceptarPinAdmin(manualLat = null, manualLng = null) {
-            isEditingLocation = false;
-            document.getElementById('admin-pin-controls').style.display = 'none';
-            map.off('move', window.adminMapMoveEvent);
-            map.off('moveend', window.adminMapMoveEndEvent);
-            
-            const lat = manualLat || (adminPendingLatLng ? adminPendingLatLng.lat : null);
-            const lng = manualLng || (adminPendingLatLng ? adminPendingLatLng.lng : null);
-            if(!lat || !lng) return;
-            
-            document.getElementById('cajera-coords').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            actualizarIconoCoordenadas();
-            await renderMapPosition(lat, lng);
-            await obtenerZonaORS(lat, lng);
-        }
-
-        function cancelarPinAdmin() {
-            isEditingLocation = false;
-            document.getElementById('admin-pin-controls').style.display = 'none';
-            map.off('move', window.adminMapMoveEvent);
-            map.off('moveend', window.adminMapMoveEndEvent);
-            
-            const coords = document.getElementById('cajera-coords').value;
-            if(coords) {
-                const [lat, lng] = coords.split(',').map(Number);
-                renderMapPosition(lat, lng);
-            } else {
-                if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
-                if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
-            }
-        }
-
-        async function obtenerZonaORS(lat, lng) {
-            const inputZona = document.getElementById('cajera-zona');
-            inputZona.value = "Buscando...";
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
-                const data = await res.json();
-                if (data && data.address) {
-                    let partes = [];
-                    if (data.address.road) partes.push(data.address.road);
-                    else if (data.address.neighbourhood) partes.push(data.address.neighbourhood);
-                    if (data.address.city || data.address.town) partes.push(data.address.city || data.address.town);
-                    if (partes.length > 0) { inputZona.value = partes.join(', '); return; }
-                }
-            } catch(e) {}
-            inputZona.value = "Ubicación fijada";
-        }
-
-        // ==========================================
-        // MANEJO DE INPUTS Y EVENTOS
-        // ==========================================
-        function actualizarIconoCoordenadas() {
-            const input = document.getElementById('cajera-coords');
-            const icon = document.getElementById('action-icon');
-            const btn = document.getElementById('btn-coords-action');
-            if (input.value.trim().length > 0) {
-                icon.innerText = 'close';
-                btn.classList.replace('bg-[#ff073a]/20', 'bg-red-500/20');
-                btn.classList.replace('text-[#ff073a]', 'text-red-500');
-            } else {
-                icon.innerText = 'edit';
-                btn.classList.replace('bg-red-500/20', 'bg-[#ff073a]/20');
-                btn.classList.replace('text-red-500', 'text-[#ff073a]');
-            }
-        }
-
-        function accionCoordenadas() {
-            const icon = document.getElementById('action-icon');
-            if (icon.innerText === 'close') {
-                document.getElementById('cajera-coords').value = '';
-                document.getElementById('cajera-zona').value = '';
-                document.getElementById('cajera-tarifa').innerText = '--';
-                document.getElementById('cajera-km').innerText = '--';
-                document.getElementById('cajera-tiempo').innerText = '--';
-                actualizarIconoCoordenadas();
-                if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
-                if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
-                const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
-                map.setView([sLat, sLng], 13);
-            } else {
-                activarPinAdmin();
-            }
-        }
-
-        async function actualizarCoordenadasManualAdmin(val) {
-            if(!val || val.trim() === '') return; 
-            const match = val.match(/[(]?\s*(-?\d+\.\d+)\s*[,;\s]+\s*(-?\d+\.\d+)\s*[)]?/);
-            if(match) {
-                document.getElementById('cajera-coords').blur(); 
-                await aceptarPinAdmin(parseFloat(match[1]), parseFloat(match[2])); 
-            } else {
-                alert("Formato inválido. Usa: Latitud, Longitud (ej: 10.254, -68.010)");
-            }
-        }
-
-        // Arrancar el mapa cuando el DOM esté listo
-        document.addEventListener("DOMContentLoaded", () => {
-            initLeafletMap();
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('jw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito');
+                })
+                .catch(error => {
+                    console.log('Fallo en el registro del ServiceWorker:', error);
+                });
         });
-    </script>
+    }
+</script>
+<div class="modal" id="install-modal">
+    <div class="modal-overlay" onclick="toggleModal('install-modal', false)"></div>
+    <div class="modal-content flex flex-col max-h-[85vh] p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h2 class="text-2xl font-black text-white uppercase tracking-tighter">Instalar App</h2>
+            </div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('install-modal', false)">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        <div class="flex flex-col gap-4">
+            <div id="install-instructions" class="text-zinc-300 text-sm leading-relaxed font-medium"></div>
+            <button id="modal-install-btn" class="w-full bg-primary text-white font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-primary/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all hidden">
+                Descargar Automáticamente <span class="material-symbols-outlined">download</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="sedes-modal">
+    <div class="modal-overlay" onclick="toggleModal('sedes-modal', false)"></div>
+    <div class="modal-content p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-8"><div class="flex items-center gap-3"><div class="w-1.5 h-6 bg-primary rounded-full"></div><h2 class="text-2xl font-black text-white uppercase tracking-tighter">Seleccionar Sede</h2></div><button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('sedes-modal', false)"><span class="material-symbols-outlined text-lg">close</span></button></div>
+        <div class="space-y-4" id="sedes-list-container"></div>
+    </div>
+</div>
+
+<div class="modal" id="horario-modal">
+    <div class="modal-overlay" onclick="toggleModal('horario-modal', false)"></div>
+    <div class="modal-content p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3"><div class="w-1.5 h-6 bg-primary rounded-full"></div><h2 class="text-2xl font-black text-white uppercase tracking-tighter">Horario Semanal</h2></div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('horario-modal', false)"><span class="material-symbols-outlined text-lg">close</span></button>
+        </div>
+        <div class="relative mb-6">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white pointer-events-none z-10">storefront</span>
+            <select id="horario-sede-select" class="w-full bg-zinc-800/90 border border-zinc-500 rounded-2xl py-3 pr-10 pl-11 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-xs font-black uppercase tracking-wider appearance-none shadow-lg relative" onchange="changeHorarioSede(this.value)"></select>
+            <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none z-10">expand_more</span>
+        </div>
+        <div class="space-y-2" id="horario-list-container"></div>
+    </div>
+</div>
+
+<div class="modal" id="mapa-modal">
+    <div class="modal-overlay" onclick="toggleModal('mapa-modal', false)"></div>
+    <div class="modal-content p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3"><div class="w-1.5 h-6 bg-blue-500 rounded-full"></div><h2 class="text-2xl font-black text-white uppercase tracking-tighter">Ver Ubicación</h2></div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('mapa-modal', false)"><span class="material-symbols-outlined text-lg">close</span></button>
+        </div>
+        <div class="space-y-3" id="mapa-list-container"></div>
+    </div>
+</div>
+
+<div class="modal" id="chat-modal">
+    <div class="modal-overlay" onclick="toggleModal('chat-modal', false)"></div>
+    <div class="modal-content p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3"><div class="w-1.5 h-6 bg-[#25D366] rounded-full"></div><h2 class="text-2xl font-black text-white uppercase tracking-tighter">Contáctatanos</h2></div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('chat-modal', false)"><span class="material-symbols-outlined text-lg">close</span></button>
+        </div>
+        <div class="space-y-3" id="chat-list-container"></div>
+    </div>
+</div>
+
+<div class="modal" id="categories-modal">
+    <div class="modal-overlay" id="cat-overlay" onclick="toggleModal('categories-modal', false)"></div>
+    <div class="modal-content flex flex-col max-h-[85vh] p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h2 class="text-2xl font-black text-white uppercase tracking-tighter">Categorías</h2>
+            </div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('categories-modal', false)">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        <div class="overflow-y-auto hide-scrollbar flex-1 pb-4 pr-1">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="all-categories-list"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="product-modal">
+    <div class="modal-overlay" onclick="toggleModal('product-modal', false)"></div>
+    <div class="modal-content flex flex-col max-h-[85vh] md:max-h-[85vh] overflow-hidden glass-contour" id="product-content"></div>
+</div>
+
+<div class="modal" id="sugerencias-modal">
+    <div class="modal-overlay" onclick="toggleModal('sugerencias-modal', false)"></div>
+    <div class="modal-content p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex flex-col">
+                <h2 class="text-2xl font-black text-white uppercase tracking-tighter">COMBOX</h2>
+                <div class="flex gap-0.5 text-yellow-400 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="shareSugerencias()">
+                    <span class="material-symbols-outlined text-lg">ios_share</span>
+                </button>
+                <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('sugerencias-modal', false)">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+        </div>
+        <p class="text-sm text-zinc-300 mb-6 font-medium leading-relaxed">Nos gustaría leer sus opiniones, tus sugerencias/consejos son importantes para nosotros.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Nombre (Opcional / Anónimo)</label>
+                <input type="text" id="sug-nombre" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] placeholder:text-white/30 text-base" placeholder="Ej. Juan Pérez">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Tu Sugerencia *</label>
+                <textarea id="sug-texto" rows="4" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] placeholder:text-white/30 text-base resize-none" placeholder="¿En qué podemos mejorar?"></textarea>
+            </div>
+            <button type="button" id="btn-enviar-sug" onclick="enviarSugerencia()" class="w-full bg-yellow-400 text-black font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-yellow-400/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all">
+                Enviar Sugerencia <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="empleo-modal">
+    <div class="modal-overlay" onclick="toggleModal('empleo-modal', false)"></div>
+    <div class="modal-content flex flex-col max-h-[85vh] p-6 pb-8 glass-contour" style="background: #0A0A0B;">
+        <div class="flex items-center justify-between mb-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h2 class="text-2xl font-black text-white uppercase tracking-tighter">Únete al equipo</h2>
+            </div>
+            <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 flex-shrink-0 relative z-50" onclick="event.preventDefault(); event.stopPropagation(); toggleModal('empleo-modal', false)">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-4 overflow-y-auto hide-scrollbar pb-4 pr-1">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Cédula *</label>
+                    <input type="number" id="emp-cedula" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm" placeholder="Ej. 25123456">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Teléfono *</label>
+                    <input type="tel" id="emp-telefono" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm" placeholder="Ej. 0424...">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Nombre Completo *</label>
+                <input type="text" id="emp-nombre" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm" placeholder="Ej. María González">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Sexo *</label>
+                    <select id="emp-sexo" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm appearance-none">
+                        <option value="Femenino" class="text-black">Femenino</option>
+                        <option value="Masculino" class="text-black">Masculino</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">F. Nacimiento *</label>
+                    <input type="date" id="emp-fecha" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm appearance-none" style="color-scheme: dark;">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Dónde Reside *</label>
+                <input type="text" id="emp-domicilio" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm" placeholder="Sector, Municipio...">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Discapacidades (Opcional)</label>
+                <input type="text" id="emp-discapacidad" class="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-white outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000] text-sm" placeholder="Ninguna">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Cargos de Interés * (Selecciona uno o varios)</label>
+                <div class="grid grid-cols-2 gap-2" id="emp-cargo-container">
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Delivery" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Delivery</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Chofer" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Chofer</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Cajera" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Cajera</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Despachador" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Despachador</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Producción (Charcutero)" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Producción (Charcutero)</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Atención al Cliente" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Atención al Cliente</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Community Manager" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Community Manager</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform">
+                        <input type="checkbox" value="Gerencia / Administración" class="emp-cargo-cb w-4 h-4 text-primary bg-black/50 border-white/20 rounded focus:ring-primary focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-white leading-tight">Gerencia / Administración</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pt-4 border-t border-white/10 mt-auto flex-shrink-0">
+            <button type="button" id="btn-enviar-emp" onclick="enviarCurriculum()" class="w-full bg-primary text-white font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-primary/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all">
+                Enviar Datos <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+</div>
+<script src="misZonasGeoJSON.js"></script>
+
+</script>
+<div class="modal" id="scanner-modal">
+    <div class="modal-overlay" onclick="closeScannerModal()"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour mx-4" style="background: #0A0A0B; max-width: 350px; margin: auto;">
+        
+        <div class="flex items-center justify-between w-full mb-4">
+            <h3 class="text-xl font-black text-white uppercase tracking-tighter">Escanear Producto</h3>
+            <button type="button" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90" onclick="closeScannerModal()">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
+
+        <div id="reader" class="w-full rounded-2xl overflow-hidden bg-black/20 border border-white/10 shadow-inner"></div>
+        
+        <div class="flex items-center justify-center gap-6 mt-4">
+            <button type="button" id="btn-toggle-camera" onclick="switchScannerCamera()" class="w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all">
+                <span class="material-symbols-outlined text-[24px]">cameraswitch</span>
+            </button>
+            
+            <button type="button" id="btn-toggle-flash" onclick="toggleScannerFlash()" class="w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all">
+                <span id="flash-icon" class="material-symbols-outlined text-[24px]">flash_off</span>
+            </button>
+        </div>
+
+        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-4">Apunta al código de barras</p>
+    </div>
+</div>
+
+<div class="modal" id="share-modal">
+    <div class="modal-overlay" onclick="toggleModal('share-modal', false)"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour mx-4" style="background: #0A0A0B; max-width: 320px; margin: auto;">
+        
+        <div class="flex items-center justify-between w-full mb-4">
+            <h3 class="text-xl font-black text-white uppercase tracking-tighter" id="share-modal-title">Compartir</h3>
+            <button type="button" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90" onclick="toggleModal('share-modal', false)">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
+
+        <div class="bg-white p-3 rounded-3xl mb-5 w-[200px] h-[200px] flex items-center justify-center shadow-[0_0_25px_rgba(255,255,255,0.15)] relative">
+            <div class="absolute inset-0 border-4 border-white rounded-3xl"></div>
+            <img id="share-qr-img" src="" alt="QR Code" class="w-full h-full object-contain rounded-xl">
+        </div>
+
+        <div class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 mb-4 flex items-center gap-2">
+            <div class="overflow-x-auto hide-scrollbar flex-1 text-[11px] font-bold text-zinc-300 whitespace-nowrap text-left px-2" id="share-link-text"></div>
+            <button onclick="copyShareLink()" class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white flex-shrink-0 active:scale-90 shadow-lg shadow-primary/30">
+                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+            </button>
+        </div>
+
+        <button onclick="nativeShare()" id="btn-native-share" class="w-full bg-white/10 text-white font-black py-3.5 rounded-xl text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all border border-white/10">
+            Compartir Enlace <span class="material-symbols-outlined text-[18px]">share</span>
+        </button>
+    </div>
+</div>
+
+<div class="modal" id="welcome-modal">
+    <div class="modal-overlay" onclick="toggleModal('welcome-modal', false); setTimeout(triggerFoodRain, 600);"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour" style="background: #0A0A0B;">
+        <span class="text-5xl mb-4">📢</span>
+        <h3 class="text-2xl font-black text-white uppercase tracking-tighter mb-2">¡Bienvenido!</h3>
+        <p id="welcome-message-text" class="text-zinc-300 text-sm mb-6 font-medium leading-relaxed"></p>
+        <button onclick="toggleModal('welcome-modal', false); setTimeout(triggerFoodRain, 600);" class="w-full bg-primary text-white font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">Entendido</button>
+    </div>
+</div>
+
+<script src="app.js"></script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('jw.js')
+                .then(registration => console.log('SW registrado'))
+                .catch(error => console.log('Fallo SW:', error));
+        });
+    }
+</script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
