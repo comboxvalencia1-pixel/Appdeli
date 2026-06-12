@@ -1,0 +1,3995 @@
+function configurarManifiestoPWA() {
+    const manifestLink = document.getElementById('pwa-manifest');
+    if (!manifestLink) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isModoAdmin = urlParams.has('DeliveryAdmin8382727282891');
+
+    if (isModoAdmin) {
+        const adminManifest = {
+            "name": "COMBOX Admin Delivery",
+            "short_name": "Admin COMBOX",
+            "description": "Panel de administración y ruteo de COMBOX.",
+            "start_url": "./index.html?DeliveryAdmin8382727282891", 
+            "display": "standalone",
+            "background_color": "#0A0A0B",
+            "theme_color": "#ff073a",
+            "orientation": "portrait",
+            "icons": [
+                { "src": "logo_white.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+                { "src": "logo_white.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+            ]
+        };
+
+        const blob = new Blob([JSON.stringify(adminManifest)], { type: 'application/json' });
+        manifestLink.setAttribute('href', URL.createObjectURL(blob));
+    }
+}
+configurarManifiestoPWA();
+
+
+    const API = 'https://script.google.com/macros/s/AKfycbw3G94u3EZR6kyOKKn-7RgIVJROgkKYvG95dw3l7yfVqpIiqW8Wj5k4NsY-_ltEPPzDNg/exec';
+    const DEFAULT_IMG = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' style='background-color:%230A0A0B;'%3E%3Ctext fill='%23666666' x='50%25' y='50%25' font-family='sans-serif' font-size='24' font-weight='900' text-anchor='middle' dominant-baseline='middle'%3ESin Imagen%3C/text%3E%3C/svg%3E";
+ 
+ // --- INICIO DE LA CORRECCIÓN DE ESTRUCTURA ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registrado:', reg.scope))
+                .catch(err => console.error('Error al registrar SW:', err));
+        });
+    }
+    // --- FIN DE LA CORRECCIÓN ---
+    
+    // Instalador PWA Lógica y Detección
+    let deferredPrompt;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    if (isStandalone) {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.style.display = 'none';
+        
+        const topAppBtn = document.getElementById('top-nav-app-btn');
+        if (topAppBtn) topAppBtn.style.display = 'none';
+        
+        const topAppSeparator = document.getElementById('top-nav-app-separator');
+        if (topAppSeparator) topAppSeparator.style.display = 'none';
+    } else {
+        setTimeout(() => {
+            if(!localStorage.getItem('pwa_prompt_dismissed')) {
+                const banner = document.getElementById('pwa-install-banner');
+                if (banner) banner.classList.remove('translate-y-[200%]');
+            }
+        }, 2000);
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+    });
+
+    function hidePwaInstall() {
+        document.getElementById('pwa-install-banner').classList.add('translate-y-[200%]');
+        localStorage.setItem('pwa_prompt_dismissed', 'true');
+    }
+
+    const isIos = () => { return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()); }
+
+    function renderInstallModal() {
+        const inst = document.getElementById('install-instructions');
+        const btn = document.getElementById('modal-install-btn');
+        
+        if (isIos()) {
+            inst.innerHTML = `
+                <div class="flex flex-col gap-4 text-center">
+                    <p>Para instalar <b>Combox</b> en tu iPhone o iPad sigue estos pasos:</p>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-4 text-left">
+                        <span class="material-symbols-outlined text-3xl text-zinc-300">more_horiz</span>
+                        <p class="text-xs">1. Presiona el botón de los <b>3 puntos</b>.</p>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-4 text-left">
+                        <span class="material-symbols-outlined text-3xl text-blue-400">ios_share</span>
+                        <p class="text-xs">2. Toca la opción de <b>"Compartir"</b>.</p>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-4 text-left">
+                        <span class="material-symbols-outlined text-3xl text-zinc-300">add_box</span>
+                        <p class="text-xs">3. Selecciona <b>"Añadir a pantalla de inicio"</b>.</p>
+                    </div>
+                </div>`;
+            btn.classList.add('hidden');
+        } else {
+            inst.innerHTML = `
+                <div class="flex flex-col gap-4 text-center">
+                    <p>Instala la App oficial para un acceso inmediato y un rendimiento superior.</p>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-4 text-left">
+                        <span class="material-symbols-outlined text-3xl text-zinc-300">more_vert</span>
+                        <p class="text-xs">1. Toca el <b>Menú de 3 puntos</b> en la esquina superior de tu navegador.</p>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-4 text-left">
+                        <span class="material-symbols-outlined text-3xl text-primary">add_to_home_screen</span>
+                        <p class="text-xs">2. Selecciona <b>"Instalar aplicación"</b> o <b>"Agregar a pantalla principal"</b>.</p>
+                    </div>
+                </div>`;
+            
+            if (deferredPrompt) {
+                btn.classList.remove('hidden');
+                btn.innerHTML = 'Instalar Automáticamente <span class="material-symbols-outlined">download</span>';
+                btn.onclick = async () => {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') { toggleModal('install-modal', false); hidePwaInstall(); }
+                    deferredPrompt = null;
+                };
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+    }
+
+    if (/android/i.test(navigator.userAgent)) {
+        document.documentElement.classList.add('is-android');
+    }
+
+    let db = null; 
+    let cart = {}; 
+    let currentType = 'Individual'; 
+    let currentCat = 'TODOS'; 
+    let currentSort = 'precio_menor'; 
+    let currentSede = null; 
+    let currentHorarioSede = null; 
+    let checkoutType = 'delivery'; 
+    let checkoutSede = null; 
+    let lastScrollY = window.scrollY; 
+    let tasaBCV = 1; 
+    let audioCtx;
+    let ticking = false;
+    let searchRenderTimer = null; 
+    let searchScrollTimer = null;
+    let initialRenderDone = false;
+    let cachedDataString = null;
+    
+// Función para proteger contra XSS convirtiendo caracteres peligrosos en entidades HTML seguras
+function sanitizeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+    // Variable global para reutilizar el mismo canvas en toda la app
+const sharedCanvas = document.createElement('canvas');
+sharedCanvas.width = 5;
+sharedCanvas.height = 20;
+const sharedCtx = sharedCanvas.getContext('2d', { willReadFrequently: true });
+    
+    let catalogLimit = 24;
+    let totalFilteredItemsCount = 0;
+   
+   // INICIO: Sistema de extracción de color optimizado
+    const colorCache = new Map();
+
+function extractLeftColor(imgElement, cardId) {
+    let cardElement = imgElement.closest('.product-card-glass');
+    
+    // Si no es un producto del catálogo, buscamos la capa interna del carrito
+    if (!cardElement) {
+        const cartContainer = imgElement.closest('.cart-item-container');
+        if (cartContainer) cardElement = cartContainer.querySelector('.cart-bg-layer');
+    }
+    
+    if (!cardElement) return;
+
+    if (colorCache.has(cardId)) {
+        cardElement.style.background = colorCache.get(cardId);
+        return;
+    }
+
+    try {
+        // Usamos el contexto global en lugar de crear uno nuevo
+        sharedCtx.clearRect(0, 0, 5, 20); // Limpiamos el canvas antes de dibujar
+        sharedCtx.drawImage(imgElement, 0, 0, imgElement.naturalWidth * 0.1, imgElement.naturalHeight, 0, 0, 5, 20);
+
+        const data = sharedCtx.getImageData(0, 0, 5, 20).data;
+        let r = 0, g = 0, b = 0, count = 0;
+
+        for (let i = 0; i < data.length; i += 16) { 
+            r += data[i];
+            g += data[i+1];
+            b += data[i+2];
+            count++;
+        }
+
+        r = Math.floor((r / count) * 0.9);
+        g = Math.floor((g / count) * 0.9);
+        b = Math.floor((b / count) * 0.9);
+
+        const bgStyle = `linear-gradient(135deg, rgba(${r},${g},${b},0.8) 0%, rgba(15,15,18,0.9) 100%)`;
+        
+        colorCache.set(cardId, bgStyle);
+        cardElement.style.background = bgStyle;
+
+    } catch (e) {
+        const defaultBg = 'rgba(255, 255, 255, 0.08)';
+        colorCache.set(cardId, defaultBg);
+        cardElement.style.background = defaultBg;
+    }
+}
+    // FIN: Sistema de extracción de color optimizado
+    
+    const searchContainer = document.getElementById('search-container');
+    
+let map, userMarker, zonesGeoLayer;
+let rutaLayer; 
+let marcadoresSedesMap = [];
+let sedeMasCercanaCalculada = null;
+let tarifaFinalCalculada = 0;
+let pendingLatLng = null;
+let savedLatLngBeforeEdit = null;
+let isEditingLocation = false;
+let isManualLocation = false;
+let pickupMap = null;
+
+
+
+// Iconos globales del mapa
+const greenDotIcon = L.divIcon({
+    className: 'bg-transparent',
+    html: `<div class="w-3 h-3 bg-neon-accent rounded-full border-[1.5px] border-white shadow-[0_0_10px_#39FF14] animate-pulse"></div>`,
+    iconSize: [12, 12], iconAnchor: [6, 6]
+});
+
+const redPinIcon = L.divIcon({
+    className: 'bg-transparent',
+    html: `<span class="material-symbols-outlined text-[40px] text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,1)]" style="font-variation-settings: 'FILL' 1;">location_on</span>`,
+    iconSize: [40, 40], iconAnchor: [20, 40]
+});
+
+
+// --- NUEVA FUNCIÓN DE GEOCODIFICACIÓN (CLIENTE) ---
+async function actualizarInputDireccion(lat, lng) {
+    const inputUbicacion = document.getElementById('checkout-location');
+    if (!inputUbicacion) return;
+
+    if (!inputUbicacion.value || inputUbicacion.value.match(/[(]?\s*(-?\d+\.\d+)/)) {
+        inputUbicacion.value = "Buscando dirección...";
+    }
+
+    try {
+        const urlNominatim = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+        const resNom = await fetch(urlNominatim, { signal: AbortSignal.timeout(4000) });
+        if (resNom.ok) {
+            const data = await resNom.json();
+            if (data && data.address) {
+                const addr = data.address;
+                let partes = [];
+                if (addr.road) partes.push(addr.road);
+                else if (addr.neighbourhood) partes.push(addr.neighbourhood);
+                const ciudad = addr.city || addr.town || addr.village || addr.municipality;
+                if (ciudad) partes.push(ciudad);
+                if (partes.length > 0) {
+                    inputUbicacion.value = partes.join(', ');
+                    return;
+                }
+            }
+        }
+    } catch(e) {} // Falla silenciosa, pasa al intento 2
+
+    try {
+        const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImZmY2VkMzZhOTM4YjQ1MTliZjg4Y2M3ZTk3N2E5ZmQ4IiwiaCI6Im11cm11cjY0In0='; 
+        const urlORS = `https://api.openrouteservice.org/geocode/reverse?api_key=${orsApiKey}&point.lon=${lng}&point.lat=${lat}`;
+        const resORS = await fetch(urlORS, { signal: AbortSignal.timeout(4000) });
+        if (resORS.ok) {
+            const data = await resORS.json();
+            if (data.features && data.features.length > 0) {
+                const props = data.features[0].properties;
+                let partes = [];
+                if (props.street) partes.push(props.street);
+                if (props.locality) partes.push(props.locality);
+                else if (props.county) partes.push(props.county);
+                inputUbicacion.value = partes.length > 0 ? partes.join(', ') : (props.name || "Ubicación en mapa");
+                return;
+            }
+        }
+    } catch(e) {}
+
+    inputUbicacion.value = "Ubicación fijada en mapa";
+}
+
+
+function applyModalColor(imgElement, id) {
+    const modalBg = document.getElementById('modal-bg-color');
+    if (!modalBg) return;
+    
+    const cacheKey = 'card-' + id;
+    if (colorCache.has(cacheKey)) {
+        modalBg.style.background = colorCache.get(cacheKey);
+        return;
+    }
+    
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        canvas.width = 5; canvas.height = 20;
+        ctx.drawImage(imgElement, 0, 0, imgElement.naturalWidth * 0.1, imgElement.naturalHeight, 0, 0, 5, 20);
+        const data = ctx.getImageData(0, 0, 5, 20).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 16) { r += data[i]; g += data[i+1]; b += data[i+2]; count++; }
+        r = Math.floor((r / count) * 0.9);
+        g = Math.floor((g / count) * 0.9);
+        b = Math.floor((b / count) * 0.9);
+        const bgStyle = `linear-gradient(135deg, rgba(${r},${g},${b},0.9) 0%, rgba(35,35,40,0.9) 100%)`;
+        
+        colorCache.set(cacheKey, bgStyle);
+        modalBg.style.background = bgStyle;
+    } catch (e) {
+        modalBg.style.background = 'rgba(35,35,40,0.9)';
+    }
+}
+
+function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
+    const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+
+    // Bloqueo de zoom estricto (Mobile Safari / Chrome)
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+    document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+    document.addEventListener('gestureend', function (e) { e.preventDefault(); });
+
+   async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+    // Añadimos un timestamp para evitar que el navegador use caché corrupto
+    const finalUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+    
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(finalUrl, options);
+            if (!response.ok) throw new Error('Fallo HTTP');
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch(e) {
+                throw new Error('La respuesta del servidor no es válida.');
+            }
+        } catch (err) {
+            if (i === maxRetries - 1) throw err;
+            await new Promise(res => setTimeout(res, 300 * Math.pow(2, i))); // Espera un poco más entre reintentos
+        }
+    }
+}
+
+    function customAlert(msg, title = 'Aviso') {
+        document.getElementById('dialog-title').innerText = title;
+        document.getElementById('dialog-msg').innerText = msg;
+        document.getElementById('dialog-buttons').innerHTML = `<button class="w-full bg-primary text-white font-black py-3 rounded-xl text-xs uppercase shadow-lg shadow-primary/30" onclick="closeCustomDialog()">Entendido</button>`;
+        toggleModal('custom-dialog-modal', true);
+    }
+
+    function customConfirm(msg, onConfirm, title = 'Confirmar') {
+        document.getElementById('dialog-title').innerText = title;
+        document.getElementById('dialog-msg').innerText = msg;
+        window._pendingConfirm = onConfirm;
+        document.getElementById('dialog-buttons').innerHTML = `
+            <button class="w-full bg-white/10 text-white font-black py-3 rounded-xl text-xs uppercase" onclick="closeCustomDialog()">Cancelar</button>
+            <button class="w-full bg-primary text-white font-black py-3 rounded-xl text-xs uppercase shadow-lg shadow-primary/30" onclick="let cb = window._pendingConfirm; closeCustomDialog(); if(cb) cb();">Aceptar</button>
+        `;
+        toggleModal('custom-dialog-modal', true);
+    }
+
+    function closeCustomDialog() {
+        toggleModal('custom-dialog-modal', false);
+        window._pendingConfirm = null;
+    }
+
+    function clearCategoryAndKeepScroll() {
+        const targetScroll = window.scrollY; 
+        
+        currentCat = 'TODOS'; 
+        catalogLimit = 24; 
+        if (currentSort === 'relevancia') currentSort = 'precio_menor';
+        
+        const menuBtn = document.getElementById('cat-menu-btn');
+        if (menuBtn) {
+            menuBtn.classList.add('bg-white/10', 'border-white/20');
+            menuBtn.classList.remove('bg-primary', 'border-primary');
+        }
+        
+        const searchInput = document.getElementById('global-search');
+        if(searchInput) searchInput.value = '';
+        const searchIcon = document.getElementById('search-icon');
+        if(searchIcon) {
+            searchIcon.innerText = 'search'
+            searchIcon.classList.remove('text-primary');
+        }
+        
+        const tabsContainer = document.getElementById('type-tabs-container');
+        tabsContainer.classList.remove('tabs-hidden');
+
+        setTimeout(() => {
+            window.requestAnimationFrame(() => {
+                render(); 
+                window.requestAnimationFrame(() => {
+                    window.scrollTo(0, targetScroll); 
+                });
+            });
+        }, 0);
+    }
+
+    function generarId() { return 'ID-' + Math.random().toString(36).substr(2, 9).toUpperCase(); }
+
+    async function enviarSugerencia() {
+        const lastSugTime = localStorage.getItem('last_sug_time');
+        if (lastSugTime && (Date.now() - parseInt(lastSugTime)) < 60000) {
+            customAlert('Por favor, espera 1 minuto antes de enviar otra sugerencia.');
+            return;
+        }
+
+        const texto = document.getElementById('sug-texto').value.trim();
+        if (!texto) { customAlert('Por favor, escribe una sugerencia.'); return; }
+        
+        const nombre = document.getElementById('sug-nombre').value.trim() || 'Anónimo';
+        const btn = document.getElementById('btn-enviar-sug');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Enviando...';
+
+        localStorage.setItem('last_sug_time', Date.now());
+
+        const payload = {
+            action: 'nueva_sugerencia',
+            id_sugerencia: generarId(),
+            nombre_cliente: nombre,
+            sugerencia: texto
+        };
+
+        try {
+            await fetch(API, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            document.getElementById('sug-texto').value = '';
+            document.getElementById('sug-nombre').value = '';
+            toggleModal('sugerencias-modal', false);
+            setTimeout(() => customAlert('¡Gracias por tu sugerencia!'), 300);
+        } catch (e) {
+            customAlert('Revisa tu conexión a internet e intenta de nuevo.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Enviar Sugerencia <span class="material-symbols-outlined">send</span>';
+        }
+    }
+
+    async function enviarCurriculum() {
+        const lastCVTime = localStorage.getItem('last_cv_time');
+        if (lastCVTime && (Date.now() - parseInt(lastCVTime)) < 60000) {
+            customAlert('Debes esperar 1 minuto antes de volver a enviar tus datos.');
+            return;
+        }
+
+        const cedula = document.getElementById('emp-cedula').value.trim();
+        const nombre = document.getElementById('emp-nombre').value.trim();
+        const sexo = document.getElementById('emp-sexo').value;
+        const fecha = document.getElementById('emp-fecha').value;
+        const telefono = document.getElementById('emp-telefono').value.trim();
+        const domicilio = document.getElementById('emp-domicilio').value.trim();
+        const discapacidad = document.getElementById('emp-discapacidad').value.trim() || 'Ninguna';
+        
+        const cargosChecked = Array.from(document.querySelectorAll('.emp-cargo-cb:checked')).map(cb => cb.value);
+        const cargo = cargosChecked.join(', ');
+
+        if (!cedula || !nombre || !fecha || !telefono || !domicilio || cargosChecked.length === 0) {
+            customAlert('Por favor, completa todos los campos obligatorios (*) y selecciona al menos un cargo.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-enviar-emp');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Enviando...';
+
+        await localforage.setItem('combox_cv_data', { cedula, nombre, sexo, fecha, telefono, domicilio, discapacidad });
+        localStorage.setItem('last_cv_time', Date.now());
+
+        const payload = {
+            action: 'nuevo_curriculum',
+            id_curriculum: generarId(),
+            Cedula: cedula,
+            Nombre: nombre,
+            Fecha_nac: fecha,
+            telefono: telefono,
+            Domicilio: domicilio,
+            Discapacidad: discapacidad,
+            Cargos_interesado: cargo,
+            Sexo: sexo
+        };
+
+        try {
+            await fetch(API, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            toggleModal('empleo-modal', false);
+            setTimeout(() => customAlert('¡Datos enviados con éxito! Te contactaremos pronto.', 'Genial'), 300);
+        } catch (e) {
+            customAlert('Revisa tu conexión a internet e intenta de nuevo.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Enviar Datos <span class="material-symbols-outlined">send</span>';
+        }
+    }
+
+    async function loadSavedCV() {
+        const data = await localforage.getItem('combox_cv_data');
+        if(data) {
+            if(data.cedula) document.getElementById('emp-cedula').value = data.cedula;
+            if(data.nombre) document.getElementById('emp-nombre').value = data.nombre;
+            if(data.sexo) document.getElementById('emp-sexo').value = data.sexo;
+            if(data.fecha) document.getElementById('emp-fecha').value = data.fecha;
+            if(data.telefono) document.getElementById('emp-telefono').value = data.telefono;
+            if(data.domicilio) document.getElementById('emp-domicilio').value = data.domicilio;
+            if(data.discapacidad) document.getElementById('emp-discapacidad').value = data.discapacidad;
+        }
+    }
+
+    let ptrStartY = 0;
+    let ptrCurrentY = 0;
+    let isPtrPulling = false;
+    const ptrContainer = document.getElementById('ptr-container');
+    const ptrIcon = document.getElementById('ptr-icon');
+    const ptrText = document.getElementById('ptr-text');
+
+   document.addEventListener('touchstart', (e) => {
+        if (window.scrollY <= 0 && !document.body.classList.contains('modal-open')) {
+            ptrStartY = e.touches[0].clientY;
+            ptrCurrentY = ptrStartY; // <- ESTA LÍNEA EVITA EL RECARGO FANTASMA
+            isPtrPulling = true;
+            ptrContainer.style.transition = 'none';
+        }
+    }, {passive: true});
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isPtrPulling) return;
+        ptrCurrentY = e.touches[0].clientY;
+        let pullDist = ptrCurrentY - ptrStartY;
+        
+        if (pullDist > 0 && window.scrollY <= 0) {
+            let move = Math.min(pullDist * 0.35, 180); 
+            ptrContainer.style.transform = `translate3d(0, calc(-100% + ${move}px), 0)`;
+            
+            if (move > 100) {
+                ptrIcon.classList.remove('animate-spin');
+                ptrIcon.style.transform = `rotate(${pullDist}deg)`;
+                ptrText.innerText = "Suelta para actualizar";
+            } else {
+                ptrIcon.classList.remove('animate-spin');
+                ptrText.innerText = "Estira más para actualizar";
+            }
+        }
+    }, {passive: true});
+
+    document.addEventListener('touchend', async () => {
+        if (!isPtrPulling) return;
+        isPtrPulling = false;
+        ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        let pullDist = ptrCurrentY - ptrStartY;
+        let move = Math.min(pullDist * 0.35, 180);
+        
+        if (move > 100 && window.scrollY <= 0) {
+            ptrContainer.style.transform = `translate3d(0, 45px, 0)`;
+            ptrIcon.classList.add('animate-spin');
+            ptrText.innerText = "Actualizando...";
+            
+            if(window.navigator.vibrate) window.navigator.vibrate(15);
+            
+            await localforage.removeItem('combox_db_v2');
+            saveCart(); 
+            
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 600); 
+        } else {
+            ptrContainer.style.transform = `translate3d(0, -100%, 0)`;
+        }
+        
+        ptrStartY = 0;
+        ptrCurrentY = 0;
+    });
+
+    function initAudio() {
+        if(!audioCtx) { 
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            const buffer = audioCtx.createBuffer(1, 1, 22050);
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+        }
+    }
+
+    function playClick() {
+        if(!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.04);
+        gain.gain.setValueAtTime(1.2, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.04);
+    }
+
+    document.addEventListener('touchstart', initAudio, {once: true, passive: true});
+    document.addEventListener('click', initAudio, {once: true, passive: true});
+    
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && audioCtx) {
+            if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+                audioCtx.resume();
+            }
+        }
+    });
+
+    document.addEventListener('touchstart', () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, {passive: true});
+    
+    window.addEventListener('scroll', () => {
+    if (document.body.classList.contains('modal-open')) return;
+
+    const currentScrollY = window.scrollY;
+    const isAtBottom = (window.innerHeight + currentScrollY) >= document.body.offsetHeight - 500;
+
+    if (!ticking) {
+        window.requestAnimationFrame(() => {
+            const searchInput = document.getElementById('global-search');
+            const isFocused = document.activeElement === searchInput;
+            const searchValue = searchInput ? searchInput.value.trim() : '';
+
+            if (isFocused || searchValue !== '' || currentScrollY <= 300) {
+                searchContainer.classList.remove('search-hidden');
+            } else if (currentScrollY > lastScrollY) {
+                searchContainer.classList.add('search-hidden');
+            } else {
+                searchContainer.classList.remove('search-hidden');
+            }
+
+            if (isAtBottom && catalogLimit < totalFilteredItemsCount) {
+                catalogLimit += 24;
+                appendCatalogItems(); 
+            }
+            
+            lastScrollY = currentScrollY;
+            ticking = false;
+        });
+        ticking = true;
+    }
+}, { passive: true });
+
+       document.addEventListener("DOMContentLoaded", () => {
+         
+         
+         
+        const inputs = document.querySelectorAll('#checkout-name, #checkout-phone, #checkout-location');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() { setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); });
+        });
+
+        const locInput = document.getElementById('checkout-location');
+        if(locInput) {
+            locInput.addEventListener('input', function(e) {
+    const coincidencia = e.target.value.match(/[(]?\s*(-?\d+\.\d+)\s*[,;\s]+\s*(-?\d+\.\d+)\s*[)]?/);
+    const mapWrapper = document.getElementById('map-wrapper');
+    
+    if (coincidencia) {
+        const lat = parseFloat(coincidencia[1]);
+        const lng = parseFloat(coincidencia[2]);
+        mapWrapper.style.display = 'block'; // Muestra mapa
+        isEditingLocation = true; // Activa el icono del pin rojo
+        setTimeout(() => renderMapPosition(lat, lng), 300);
+    } else {
+        if (e.target.value.trim().length > 0) {
+            mapWrapper.style.display = 'none'; // Oculta mapa si se escribe texto manual
+        } else {
+            mapWrapper.style.display = 'block'; // Muestra mapa si se borra el texto
+            getLocation();
+        }
+    }
+});
+
+        }
+
+        
+        const globalSearch = document.getElementById('global-search');
+        if(globalSearch){
+            globalSearch.addEventListener('focus', function(e) {
+                window.scrollTo({top: window.scrollY}); 
+            });
+        }
+    });
+
+   async function init() {
+    showSkeletons(); // <-- ESTO MUESTRA LOS SKELETONS INMEDIATAMENTE
+    // 1. Temporizador de emergencia: Si en 6 segundos la app no arranca, quita el splash rojo
+    const safetySplashTimer = setTimeout(() => {
+        const s = document.getElementById('splash');
+        if (s && s.style.opacity !== '0') {
+            console.warn("Forzando cierre del Splash por tiempo de espera.");
+            s.style.opacity = '0';
+            setTimeout(() => s.remove(), 600);
+        }
+    }, 6000);
+
+    try {
+        loadSavedCV();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('sugerencias')) {
+            setTimeout(() => toggleModal('sugerencias-modal', true), 500);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        let loadedFromCache = false;
+        try {
+            const cachedObjStr = await localforage.getItem('combox_db_v2');
+            if (cachedObjStr) {
+                const parsed = JSON.parse(cachedObjStr);
+                if (Date.now() - parsed.time < 21600000) {
+                    db = parsed.data;
+                    cachedDataString = JSON.stringify(db);
+                    loadedFromCache = true;
+                } else {
+                    await localforage.removeItem('combox_db_v2');
+                }
+            }
+        } catch(e) { console.error("Error cargando caché localForage:", e); }
+
+        try {
+            const savedCart = await localforage.getItem('combox_cart');
+            if(savedCart) {
+                const parsed = JSON.parse(savedCart);
+                if (Date.now() - parsed.time < 3600000) { cart = parsed.cart; } 
+                else { await localforage.removeItem('combox_cart'); }
+            }
+        } catch(e) { console.error("Error al cargar carrito:", e); }
+
+        if (loadedFromCache) {
+            await setupAfterDBLoad(true);
+        }
+
+        const freshDB = await fetchWithRetry(API);
+        
+        if(freshDB.catalogo) freshDB.catalogo.forEach((p, i) => p._index = i);
+        if(freshDB.combos) freshDB.combos.forEach((p, i) => p._index = i);
+        
+        const isDifferent = JSON.stringify(freshDB) !== cachedDataString;
+        
+        if (loadedFromCache && isDifferent) {
+            const toast = document.getElementById('update-toast');
+            if(toast) {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translate(-50%, -50%) scale(1)';
+                setTimeout(async () => {
+                    db = freshDB;
+                    await localforage.setItem('combox_db_v2', JSON.stringify({data: db, time: Date.now()})); 
+                    await setupAfterDBLoad(false); 
+                    setTimeout(() => {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                    }, 800);
+                }, 1200);
+            }
+        } else {
+            db = freshDB;
+            await localforage.setItem('combox_db_v2', JSON.stringify({data: db, time: Date.now()})); 
+            if (!loadedFromCache) {
+                await setupAfterDBLoad(false); 
+            }
+        }
+
+    } catch(e) { 
+        console.error("Error fatal en init:", e); 
+        // Si hay un error letal, mostramos una alerta para saber qué pasa
+        customAlert("Ocurrió un problema iniciando la app. Verifica tu conexión o recarga.");
+        
+        // Apagamos el splash de todas formas para que no se quede bloqueado
+        const s = document.getElementById('splash'); 
+        if(s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 600); }
+    } finally {
+        // Limpiamos el temporizador si todo salió bien o si ya falló
+        clearTimeout(safetySplashTimer);
+    }
+}
+// Escuchar los mensajes que envía el Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.tipo === 'ACTUALIZACION_JSON') {
+            console.log('¡El Service Worker trajo datos nuevos en segundo plano!');
+            
+            // Aquí actualizas tu base de datos local (db) con lo nuevo
+            const nuevosDatos = event.data.datos;
+            
+            // Ejemplo:
+            // db = nuevosDatos;
+            // renderCatalogoPOS();
+            // customAlert('Los precios se han actualizado en segundo plano');
+        }
+    });
+}
+async function setupAfterDBLoad(isCached) {
+    // 1. Bloque de finanzas para la tasa
+    if (db && db.finanzas) {
+        if(db.finanzas.tasa_usd) {
+            tasaBCV = parseFloat(db.finanzas.tasa_usd);
+            const displayEl = document.getElementById('tasa-bcv-display');
+            if(displayEl) displayEl.innerText = `${tasaBCV.toFixed(2)}`;
+        }
+    }
+    
+    // 2. NUEVO BLOQUE: Buscamos en la pestaña configuracion
+    if (db && db.configuracion) {
+        let parametros = Array.isArray(db.configuracion) ? db.configuracion[0] : db.configuracion;
+        let tituloPromo = parametros.HEADER_PROMOCIONES;
+
+        if (tituloPromo) {
+            document.getElementById('header-promociones').innerText = tituloPromo;
+        } else {
+            console.warn("No se encontró HEADER_PROMOCIONES en configuracion:", parametros);
+        }
+        
+        let msjBienvenida = parametros.mensaje_bienvenida;
+        let lastWelcome = localStorage.getItem('last_welcome_time');
+        let now = Date.now();
+        let showWelcome = false;
+
+        // Comprobamos si hay mensaje y si pasaron 24 horas (86,400,000 milisegundos)
+        if (msjBienvenida && msjBienvenida.trim() !== "") {
+            if (!lastWelcome || (now - parseInt(lastWelcome)) > 86400000) {
+                showWelcome = true;
+            }
+        }
+
+        // Si es una carga rápida de caché (isCached), evitamos el modal para no interrumpir
+        if (showWelcome && !isCached) {
+            localStorage.setItem('last_welcome_time', now.toString());
+            document.getElementById('welcome-message-text').innerText = msjBienvenida;
+            setTimeout(() => toggleModal('welcome-modal', true), 1000);
+        } else {
+            // Si no hay mensaje, ya lo vio, o es carga de caché, lanzamos la lluvia
+            setTimeout(triggerFoodRain, 2000);
+        }
+    } else {
+        // CASO: Si por algún error no carga la configuración, la lluvia se activa igual
+        setTimeout(triggerFoodRain, 2000);
+    }
+
+    // 3. Bloque de Sedes (Ahora corre libremente)
+    if(db && db.sedes && db.sedes.length) { 
+    
+    const savedSedeId = await localforage.getItem('combox_sede_id');
+        if (savedSedeId && !sedeMasCercanaCalculada) {
+            currentSede = db.sedes.find(s => s.ID_SEDE === savedSedeId) || db.sedes[0];
+        } else if (!sedeMasCercanaCalculada) {
+            currentSede = db.sedes[0]; 
+        }
+        updateHeader(); 
+    }
+
+    // 4. Parámetros de URL y Carrito
+    const urlParams = new URLSearchParams(window.location.search);
+    const pedidoParam = urlParams.get('pedido');
+    if(pedidoParam) {
+        const pairs = pedidoParam.split('_');
+        let hasNewItems = false;
+        pairs.forEach(pair => {
+            const [id, qty] = pair.split('-');
+            const productExists = getAllSourceData().find(x => getUnifiedId(x) === id);
+            if(productExists && qty && !isNaN(qty)) {
+                cart[id] = parseInt(qty);
+                hasNewItems = true;
+            }
+        });
+        if(hasNewItems) {
+            saveCart(); updateOrder(); urlParams.delete('pedido');
+            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            window.history.replaceState({}, document.title, newUrl);
+            setTimeout(() => toggleModal('cart-modal', true, renderCart), 800);
+        }
+    }
+    
+    renderPromos();
+        
+    // 5. APAGADO DEL SPLASH
+    if(!initialRenderDone) {
+        render(); 
+        initialRenderDone = true;
+        updateOrder(); 
+        
+        setTimeout(() => { const s = document.getElementById('splash'); if(s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 600); } }, isCached ? 100 : 1200);
+
+        const productId = urlParams.get('id');
+        if(productId) { setTimeout(() => openProductView(productId), 500); }
+        // ---> INYECTAR INTERCEPTOR ADMIN AQUÍ <---
+            if(urlParams.has('DeliveryAdmin8382727282891')) {
+                setTimeout(() => initAdminDelivery(), 800);
+            }
+    } else {
+        
+        render();
+        updateOrder(); 
+    }
+}
+
+    function getSortedSedes() {
+        if (!db?.sedes) return [];
+        return [...db.sedes].sort((a, b) => {
+            if (a.ID_SEDE === currentSede?.ID_SEDE) return -1;
+            if (b.ID_SEDE === currentSede?.ID_SEDE) return 1;
+            return 0;
+        });
+    }
+
+    async function saveCart() {
+        try { await localforage.setItem('combox_cart', JSON.stringify({cart: cart, time: Date.now()})); } 
+        catch(e) { console.error("Error guardando carrito:", e); }
+    }
+let currentShareUrl = '';
+let currentShareTitle = '';
+
+function openShareModal(url, title) {
+    currentShareUrl = url;
+    currentShareTitle = title;
+    
+    document.getElementById('share-modal-title').innerText = title;
+    document.getElementById('share-link-text').innerText = url;
+    
+    // Generamos el QR dinámicamente usando la API
+    document.getElementById('share-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&color=000000&bgcolor=ffffff&margin=0`;
+    
+    // Si el dispositivo no soporta compartir nativamente, ocultamos el botón
+    if (!navigator.share) {
+        document.getElementById('btn-native-share').style.display = 'none';
+    } else {
+        document.getElementById('btn-native-share').style.display = 'flex';
+    }
+    
+    toggleModal('share-modal', true);
+}
+
+function copyShareLink() {
+    navigator.clipboard.writeText(currentShareUrl);
+    customAlert('¡Enlace copiado al portapapeles!', 'Éxito');
+}
+
+function nativeShare() {
+    if (navigator.share) {
+        navigator.share({ title: currentShareTitle, url: currentShareUrl }).catch(console.error);
+    }
+}
+    function shareCartUrl() {
+    if(Object.keys(cart).length === 0) { customAlert('Tu pedido está vacío. Agrega productos antes de compartir.'); return; }
+    const cartStr = Object.entries(cart).map(([id, qty]) => `${id}-${qty}`).join('_');
+    const url = new URL(window.location.href);
+    url.searchParams.set('pedido', cartStr);
+    
+    // Abre el nuevo modal en lugar de compartir directo
+    openShareModal(url.href, 'Mi Pedido');
+}
+
+    function openInstagram() { if(currentSede?.LINK_INSTAGRAM) window.open(currentSede.LINK_INSTAGRAM, '_blank'); }
+
+    function lockScroll(lock) { 
+        if(lock) { 
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+        } else { 
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open'); 
+        } 
+    }
+    
+    function checkActiveModals() {
+        const modals = ['cart-modal', 'method-modal', 'sedes-modal', 'categories-modal', 'horario-modal', 'checkout-modal', 'product-modal', 'mapa-modal', 'chat-modal', 'sugerencias-modal', 'empleo-modal', 'custom-dialog-modal', 'install-modal'];
+        if(!modals.some(id => document.getElementById(id).classList.contains('active'))) {
+            lockScroll(false);
+        }
+    }
+
+    function toggleModal(modalId, show, renderFn) { 
+        const modal = document.getElementById(modalId); 
+        
+        if(show) { 
+            if(document.activeElement) document.activeElement.blur(); 
+            if(renderFn) renderFn();
+            modal.classList.add('active'); 
+            lockScroll(true); 
+        } else { 
+            modal.classList.remove('active'); 
+            checkActiveModals();
+        } 
+    }
+    
+    function solicitarGPS(callback) {
+        if(callback) callback(); // Abre el modal de inmediato
+        if (!sedeMasCercanaCalculada && "geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                let distMinima = Infinity;
+                db.sedes.forEach(s => {
+                    const [lat, lng] = s.COORDENADAS_SEDE.split(',').map(Number);
+                    if (getSchedule(s).isOpen && calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, lat, lng) < distMinima) {
+                        distMinima = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, lat, lng);
+                        sedeMasCercanaCalculada = s;
+                    }
+                });
+                // Actualiza visualmente si los modales ya están abiertos
+                if(document.getElementById('sedes-modal').classList.contains('active')) renderSedesModal();
+                if(document.getElementById('mapa-modal').classList.contains('active')) renderMapModal();
+            }, () => { }, {timeout: 5000});
+        }
+    }
+
+    function toggleSedesModal(show) { 
+        if(show) solicitarGPS(() => toggleModal('sedes-modal', show, renderSedesModal));
+        else toggleModal('sedes-modal', show);
+    }
+    function toggleCategoriesModal(show) { toggleModal('categories-modal', show, renderAllCategories); }
+    function toggleCartModal(show) { toggleModal('cart-modal', show, renderCart); }
+    function toggleProductModal(show) { toggleModal('product-modal', show, null); }
+
+
+// --- CÓDIGO NUEVO DEL ESCÁNER AQUÍ ---
+    let html5QrCode = null;
+    let availableCameras = [];
+    let currentCameraIndex = 0;
+    let isFlashOn = false;
+
+    function openScannerModal() {
+        toggleModal('scanner-modal', true);
+        
+        // Reset visual del flash
+        isFlashOn = false;
+        document.getElementById('flash-icon').innerText = 'flash_off';
+        document.getElementById('btn-toggle-flash').className = 'w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all';
+
+        // Si es la primera vez que abrimos, listamos TODAS las cámaras del teléfono
+        if (availableCameras.length === 0) {
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    availableCameras = devices;
+                    // Intentamos iniciar con una cámara trasera que NO sea la 0 (para evadir el Ultra-Wide de Samsung)
+                    let backCam = devices.findIndex(c => c.label.toLowerCase().includes('back') && !c.label.toLowerCase().includes('0'));
+                    if (backCam === -1) backCam = devices.findIndex(c => c.label.toLowerCase().includes('back')); // Fallback a cualquier trasera
+                    
+                    currentCameraIndex = backCam >= 0 ? backCam : 0;
+                }
+                startScannerInstance();
+            }).catch(err => {
+                console.error("Error obteniendo cámaras", err);
+                startScannerInstance(); // Modo a prueba de fallos
+            });
+        } else {
+            startScannerInstance();
+        }
+    }
+
+    function startScannerInstance() {
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader", {
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ],
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+            });
+        }
+
+        // Si tenemos la lista de lentes físicos, usamos el ID exacto. Si no, usamos el método genérico.
+        let cameraConfig = availableCameras.length > 0 
+            ? { deviceId: { exact: availableCameras[currentCameraIndex].id } } 
+            : { facingMode: "environment" };
+
+        html5QrCode.start(
+            cameraConfig,
+            {
+                fps: 15,
+                disableFlip: true,
+                // REDUCCIÓN CRÍTICA: Forzamos la búsqueda solo en un rectángulo en el centro exacto
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    let boxWidth = Math.min(viewfinderWidth * 0.75, 280); 
+                    // Obligamos a que la altura sea muy estrecha (90px) para atrapar códigos EAN-13
+                    return { width: boxWidth, height: 90 }; 
+                }
+            },
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+            console.error("Error al encender lente", err);
+            // Fallback automático por si el lente falla
+            if (cameraConfig.deviceId) {
+                html5QrCode.start({ facingMode: "environment" }, { fps: 15, disableFlip: true, qrbox: { width: 250, height: 90 } }, onScanSuccess, onScanFailure);
+            }
+        });
+    }
+
+    function closeScannerModal() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                html5QrCode = null;
+            }).catch(err => console.error("Fallo al apagar cámara", err));
+        }
+        toggleModal('scanner-modal', false);
+    }
+
+    function switchScannerCamera() {
+        if (!html5QrCode || availableCameras.length <= 1) {
+            customAlert("No se detectaron lentes adicionales en tu dispositivo.");
+            return;
+        }
+        
+        // Magia para Samsung: Pasamos a la siguiente cámara en la lista física
+        currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+        
+        isFlashOn = false;
+        document.getElementById('flash-icon').innerText = 'flash_off';
+        document.getElementById('btn-toggle-flash').className = 'w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all';
+
+        // Detenemos el flujo de video actual y encendemos el nuevo lente
+        html5QrCode.stop().then(() => {
+            startScannerInstance();
+        }).catch(err => console.error("Error al cambiar de cámara", err));
+    }
+
+    function toggleScannerFlash() {
+        if (!html5QrCode || html5QrCode.getState() !== 2) return;
+
+        isFlashOn = !isFlashOn;
+        const flashIcon = document.getElementById('flash-icon');
+        const flashBtn = document.getElementById('btn-toggle-flash');
+
+        html5QrCode.applyVideoConstraints({ advanced: [{ torch: isFlashOn }] }).then(() => {
+            if (isFlashOn) {
+                flashIcon.innerText = 'flash_on';
+                flashBtn.className = 'w-12 h-12 rounded-full bg-yellow-500/20 border border-yellow-500/50 flex items-center justify-center text-yellow-400 active:scale-90 shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all';
+            } else {
+                flashIcon.innerText = 'flash_off';
+                flashBtn.className = 'w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all';
+            }
+        }).catch(err => {
+            console.warn("Flash no soportado:", err);
+            isFlashOn = !isFlashOn; 
+            customAlert("Tu navegador bloquea el flash o este lente no lo soporta.");
+        });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        closeScannerModal();
+        if(window.navigator.vibrate) window.navigator.vibrate([30, 50, 30]); 
+        playClick(); 
+        
+        const searchInput = document.getElementById('global-search');
+        searchInput.value = decodedText;
+        
+        clearCategoryAndKeepScroll(); 
+        onSearchInput(); 
+    }
+
+    function onScanFailure(error) {
+        // Vacío para no saturar la consola
+    }
+    // --- FIN DEL CÓDIGO NUEVO ---
+
+    function formatTimeFromIso(iso) { if(!iso) return null; return new Date(iso).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true}); }
+    
+    function openHorarioModal() {
+        if(!currentSede || !db?.sedes) return;
+        currentHorarioSede = currentSede; 
+        
+        const select = document.getElementById('horario-sede-select');
+        select.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" ${currentHorarioSede.ID_SEDE === s.ID_SEDE ? 'selected' : ''}>${s.NOMBRE_SEDE}</option>`).join('');
+        
+        toggleModal('horario-modal', true, renderHorarioList);
+    }
+
+    function changeHorarioSede(id) {
+        if(db?.sedes) currentHorarioSede = db.sedes.find(s => s.ID_SEDE === id) || currentHorarioSede;
+        if(window.navigator.vibrate) window.navigator.vibrate(10);
+        renderHorarioList(); 
+    }
+
+    function renderHorarioList() {
+        if(!currentHorarioSede) return;
+        
+        const days = ["LUNES","MARTES","MIERCOLES","JUEVES","VIERNES","SABADO","DOMINGO"];
+        const names = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+        const now = new Date();
+        const todayIdx = (now.getDay()+6)%7; 
+        
+        document.getElementById('horario-list-container').innerHTML = days.map((d,i) => {
+            const open = currentHorarioSede[`${d}_APERTURA`], close = currentHorarioSede[`${d}_CIERRE`];
+            const isToday = i === todayIdx;
+            
+            let timeHtml = '<span class="text-zinc-500">Cerrado</span>';
+            if (open && close) {
+                timeHtml = `
+                    <span class="inline-flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[14px] text-[#39FF14] drop-shadow-[0_0_5px_rgba(57,255,20,0.6)]">lock_open</span>
+                        <span class="text-[#39FF14] font-black drop-shadow-[0_0_5px_rgba(57,255,20,0.6)]">${formatTimeFromIso(open)}</span>
+                    </span>
+                    <span class="text-zinc-500 mx-1">-</span>
+                    <span class="inline-flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[14px] text-[#ff0000] drop-shadow-[0_0_5px_rgba(255,0,0,0.6)]">lock</span>
+                        <span class="text-[#ff0000] font-black drop-shadow-[0_0_5px_rgba(255,0,0,0.6)]">${formatTimeFromIso(close)}</span>
+                    </span>
+                `;
+            }
+
+            let dayClass = 'bg-white/5 border-white/10'; 
+            if (isToday) {
+                dayClass = (open && close) 
+                    ? 'bg-white/10 border-gray-300 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
+                    : 'bg-red-500/10 border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.2)]'; 
+            }
+            
+            return `<div onclick="void(0)" class="flex justify-between items-center p-3.5 rounded-2xl border ${dayClass}">
+                <span class="${isToday ? 'text-white font-black' : 'text-white font-bold'} text-sm">${names[i]}</span>
+                <span class="text-xs tracking-wide flex items-center">${timeHtml}</span>
+            </div>`;
+        }).join('');
+    }
+
+    let globalSedesMap = null; // Variable para mantener el mapa de sedes
+function openMapaModal() {
+    solicitarGPS(() => toggleModal('mapa-modal', true, renderMapModal));
+}
+
+function renderMapModal() {
+    const sorted = getSortedSedes();
+    
+    let html = `
+    <div class="relative w-full h-56 mb-4 rounded-2xl border border-white/10 overflow-hidden shadow-inner z-10 bg-[#0a0a0b]">
+        <!-- Marca de agua COMBOX -->
+        <div class="absolute top-3 left-4 z-[1000] pointer-events-none opacity-40">
+            <span class="font-[900] text-white text-sm tracking-widest drop-shadow-md">COMBOX</span>
+        </div>
+        <div id="global-sedes-map" class="w-full h-full z-0"></div>
+    </div>`;
+    
+    html += sorted.map(s => {
+        const active = currentSede?.ID_SEDE === s.ID_SEDE;
+        const bgClass = active ? 'bg-zinc-800/90 border-zinc-500 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'bg-white/5 border-white/10';
+        let esLaMasCercana = (sedeMasCercanaCalculada && sedeMasCercanaCalculada.ID_SEDE === s.ID_SEDE);
+        
+        return `
+        <div class="flex items-center justify-between p-3 rounded-2xl ${bgClass} border gap-3 mb-2">
+            <div class="flex flex-col min-w-0 flex-1">
+                <span class="text-white font-bold text-sm truncate">${sanitizeHTML(s.NOMBRE_SEDE.split(',')[0])}</span>
+                <span class="text-[9px] text-zinc-500 uppercase font-bold truncate">${sanitizeHTML(s.NOMBRE_SEDE.split(',')[1] || 'Sucursal')}</span>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+               ${esLaMasCercana ? '<span class="material-symbols-outlined text-[24px] text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" style="font-variation-settings: \'FILL\' 1;">bolt</span>' : ''}
+               <button onclick="window.open('${s.LINK_UBICACION}', '_blank')" class="bg-blue-600 text-white px-5 py-1.5 rounded-full active:scale-95 flex items-center gap-1.5 shadow-[0_0_12px_rgba(37,99,235,0.5)] border border-blue-400 transition-all">
+                   <span class="material-symbols-outlined text-[14px]">near_me</span> <span class="text-[9px] font-black uppercase tracking-widest">Ir</span>
+               </button>
+            </div>
+        </div>
+    `}).join('');
+    
+    document.getElementById('mapa-list-container').innerHTML = html;
+
+    setTimeout(() => {
+        if(globalSedesMap) globalSedesMap.remove();
+        
+        const globalRenderer = L.svg({ padding: 2.5 });
+        globalSedesMap = L.map('global-sedes-map', { zoomControl: false, attributionControl: false, renderer: globalRenderer }).setView([10.2543, -68.0101], 11);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(globalSedesMap);
+        globalSedesMap.invalidateSize();
+        globalSedesMap.on('zoomend', function() { updateMarkerScales(globalSedesMap); });
+
+        if (typeof misZonasGeoJSON !== 'undefined') {
+            L.geoJSON(misZonasGeoJSON, {
+                style: (f) => ({ color: f.properties.fill || "#E30613", weight: 2, fillColor: f.properties.fill || "#E30613", fillOpacity: 0.15 }),
+                interactive: false 
+            }).addTo(globalSedesMap);
+        }
+
+        let bounds = [];
+        db.sedes.forEach(s => {
+            const [lat, lng] = s.COORDENADAS_SEDE.split(',').map(Number);
+            bounds.push([lat, lng]);
+            
+            const sched = getSchedule(s);
+            const dotColor = sched.isOpen ? '#39FF14' : '#ff0000';
+            const dotShadow = sched.isOpen ? 'rgba(57,255,20,0.8)' : 'rgba(255,0,0,0.8)';
+            
+            let iconWrapperClass = sched.isOpen ? "" : "grayscale opacity-60";
+            let letreroClass = sched.isOpen ? "" : "opacity-60";
+            let isClosest = (sedeMasCercanaCalculada && sedeMasCercanaCalculada.ID_SEDE === s.ID_SEDE);
+            let badgeCerca = isClosest ? `<div class="absolute -top-5 bg-blue-500 text-white text-[9px] font-black px-2 py-0.5 rounded border border-blue-300 uppercase shadow-[0_0_10px_rgba(59,130,246,0.8)] whitespace-nowrap z-50 animate-bounce">¡MÁS CERCA!</div>` : '';
+
+            const iconHtml = `
+                <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative" onclick="window.open('${s.LINK_UBICACION}', '_blank')">
+                    ${badgeCerca}
+                    <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${iconWrapperClass}">
+                        <span class="material-symbols-outlined text-white" style="font-size: 22px; font-variation-settings: 'FILL' 1;">storefront</span>
+                    </div>
+                    <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${letreroClass}">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotShadow};"></span>
+                            <span class="text-[9px] font-black text-white uppercase leading-none tracking-widest">COMBOX</span>
+                        </div>
+                        <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 truncate max-w-[80px] text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+                    </div>
+                </div>`;
+            const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+            L.marker([lat, lng], { icon }).addTo(globalSedesMap);
+        });
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                L.marker([pos.coords.latitude, pos.coords.longitude], { icon: greenDotIcon }).addTo(globalSedesMap);
+                bounds.push([pos.coords.latitude, pos.coords.longitude]);
+                globalSedesMap.fitBounds(bounds, { padding: [30, 30] });
+            }, () => { if(bounds.length > 0) globalSedesMap.fitBounds(bounds, { padding: [30, 30] }); });
+        } else {
+            if(bounds.length > 0) globalSedesMap.fitBounds(bounds, { padding: [30, 30] });
+        }
+        
+        setTimeout(() => updateMarkerScales(globalSedesMap), 500);
+    }, 400);
+}
+
+
+
+    function renderChatModal() {
+        const sorted = getSortedSedes();
+        document.getElementById('chat-list-container').innerHTML = sorted.map(s => {
+            const active = currentSede?.ID_SEDE === s.ID_SEDE;
+            const bgClass = active ? 'bg-zinc-800/90 border-zinc-500' : 'bg-white/5 border-white/10';
+            return `
+            <div class="flex items-center justify-between p-4 rounded-2xl ${bgClass} border gap-3">
+                <div class="flex flex-col min-w-0 flex-1">
+                    <span class="text-white font-bold text-sm truncate">${sanitizeHTML(s.NOMBRE_SEDE.split(',')[0])}</span>
+                <span class="text-[9px] text-zinc-500 uppercase font-bold truncate">${sanitizeHTML(s.NOMBRE_SEDE.split(',')[1] || 'Sucursal')}</span>
+                </div>
+               <button onclick="window.open('https://wa.me/${s.TELEFONO}?text=${encodeURIComponent('Hola Combox, me comunico con la sede de ' + s.NOMBRE_SEDE + '. Necesito información.')}', '_blank')" class="bg-[#25D366] text-white px-5 py-2 rounded-full active:scale-[0.90] transition-transform flex items-center gap-1.5 shadow-lg border border-[#1DA851] flex-shrink-0">
+    <svg class="w-4 h-4 fill-white drop-shadow-md" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> 
+    <span class="text-[10px] font-black tracking-widest text-white">WhatsApp</span>
+</button>
+
+            </div>
+        `}).join('');
+    }
+
+    function openMethodModal() {
+        toggleModal('cart-modal', false);
+        setTimeout(() => { toggleModal('method-modal', true); }, 150);
+    }
+
+   async function openCheckoutModal(type) {
+    // Abrimos el modal instantáneamente sin bloquear la interfaz.
+    // El mapa internamente (getLocation) hará el cálculo en segundo plano.
+    openCheckoutModalLogica(type);
+}
+
+    async function openCheckoutModalLogica(type) {
+    toggleModal('method-modal', false);
+    checkoutType = type; 
+    
+    const title = document.getElementById('checkout-title');
+    
+    const locContainer = document.getElementById('checkout-location-container');
+    const submitBtn = document.getElementById('checkout-submit-btn');
+    const accent = document.getElementById('checkout-accent');
+    
+        if(type === 'delivery') {
+        title.innerText = 'Datos de Delivery';
+      
+        locContainer.style.display = 'block'; 
+        document.getElementById('pickup-map-container').style.display = 'none';
+        submitBtn.innerHTML = 'Solicitar Delivery <span class="material-symbols-outlined">two_wheeler</span>';
+        submitBtn.className = "w-full bg-neon-accent text-black font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-neon-accent/20 active:scale-[0.98] flex items-center justify-center gap-2";
+        accent.className = "w-1.5 h-6 bg-neon-accent rounded-full";
+        document.getElementById('map-wrapper').style.display = 'block';
+        document.getElementById('btn-wrong-location').style.display = 'flex';
+        document.getElementById('manual-location-wrapper').style.display = 'none';
+        
+        setTimeout(() => { if (map) map.invalidateSize(); }, 350);
+
+        const locInput = document.getElementById('checkout-location');
+        if (!locInput.value) {
+            document.getElementById('map-preview').style.display = 'block';
+            getLocation(); 
+        }
+    } else {
+        title.innerText = 'Datos de Pick-Up';
+        
+        locContainer.style.display = 'none'; 
+        document.getElementById('pickup-map-container').style.display = 'block';
+        submitBtn.innerHTML = 'Solicitar Pick-Up <span class="material-symbols-outlined">storefront</span>';
+        submitBtn.className = "w-full bg-white text-black font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-white/20 active:scale-[0.98] flex items-center justify-center gap-2";
+        accent.className = "w-1.5 h-6 bg-white rounded-full";
+        setTimeout(() => renderPickupMap(), 350);
+    }
+    
+        const selects = document.querySelectorAll('.checkout-sede-select');
+        if(db?.sedes) {
+            if(type === 'delivery' && sedeMasCercanaCalculada) {
+                checkoutSede = sedeMasCercanaCalculada;
+            } else {
+                checkoutSede = currentSede;
+            }
+            
+            selects.forEach(sel => {
+                sel.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
+                if(checkoutSede) sel.value = checkoutSede.ID_SEDE;
+            });
+        }
+
+
+    // --- EL FIX EMPIEZA AQUÍ ---
+    // 1. Abrimos la vista del modal asegurando el cierre formal de los anteriores
+    toggleModal('cart-modal', false);
+    toggleModal('checkout-modal', true, null);
+    document.getElementById('checkout-scroll-area').scrollTop = 0;
+    
+    if (map && type === 'delivery') {
+        setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    // 2. Luego hacemos las consultas asíncronas en segundo plano
+    const savedName = await localforage.getItem('combox_cliente_nombre');
+    if(savedName) {
+        document.getElementById('checkout-name').value = savedName;
+    }
+    
+    const savedPhone = await localforage.getItem('combox_cliente_telefono');
+    if(savedPhone) {
+        document.getElementById('checkout-phone').value = savedPhone;
+    
+        }
+    }
+    
+    function closeCheckout() { toggleModal('checkout-modal', false, null); setTimeout(() => toggleModal('cart-modal', true), 150); }
+    
+    
+
+    
+    function updateLocationBtnState() {
+        const loc = document.getElementById('checkout-location');
+        const btn = document.getElementById('checkout-loc-action-btn');
+        const icon = document.getElementById('checkout-loc-action-icon');
+        if(loc.value.trim() === '') { btn.className = "w-14 bg-neon-accent/10 border border-neon-accent/20 text-neon-accent rounded-2xl flex items-center justify-center active:scale-90 flex-shrink-0"; icon.innerText = "my_location"; }
+        else { btn.className = "w-14 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center active:scale-90 flex-shrink-0"; icon.innerText = "delete_sweep"; }
+    }
+    
+    function handleLocationAction() { 
+        const loc = document.getElementById('checkout-location'); 
+        if(loc.value.trim() === '') {
+            document.getElementById('map-preview').style.display = 'block';
+            getLocation(); 
+        } else { 
+            loc.value = ''; 
+            loc.focus(); 
+            updateLocationBtnState(); 
+        } 
+    }
+    
+  // Asegúrate de que la variable misZonasGeoJSON (que contiene tus coordenadas)
+// esté declarada de forma global (fuera de cualquier función).
+
+// Algoritmo para verificar si un punto está dentro de un polígono
+function isPointInPolygon(point, vs) {
+    let x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i][0], yi = vs[i][1];
+        let xj = vs[j][0], yj = vs[j][1];
+        let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// Extrae el precio del nombre de la zona (Ej: "AMARILLO: 4$" -> "TARIFA: 4$")
+function extractTariffFromName(name) {
+    if(!name) return "POR COTIZAR";
+    const match = name.match(/(\d+(?:[.,]\d+)?)\s*\$/);
+    if(match) return `TARIFA: ${match[1]}$`;
+    return name;
+}
+
+// Calcula la zona actual según las coordenadas
+function calculateTariff(lat, lng) {
+    const point = [lng, lat]; // GeoJSON usa formato [Longitud, Latitud]
+    let foundTariff = "FUERA DE ZONA";
+
+    if (typeof misZonasGeoJSON === 'undefined') return foundTariff;
+
+    misZonasGeoJSON.features.forEach(feature => {
+        if (feature.geometry.type === "Polygon") {
+            if (isPointInPolygon(point, feature.geometry.coordinates[0])) {
+                foundTariff = extractTariffFromName(feature.properties.name);
+            }
+        } else if (feature.geometry.type === "GeometryCollection") {
+            feature.geometry.geometries.forEach(geom => {
+                if (geom.type === "Polygon" && isPointInPolygon(point, geom.coordinates[0])) {
+                    foundTariff = extractTariffFromName(feature.properties.name);
+                }
+            });
+        }
+    });
+    return foundTariff;
+}
+
+ // --- NUEVA FUNCIÓN DE GEOCODIFICACIÓN (CLIENTE) ---
+async function actualizarInputDireccion(lat, lng) {
+    const inputUbicacion = document.getElementById('checkout-location');
+    if (!inputUbicacion) return;
+
+    if (!inputUbicacion.value || inputUbicacion.value.match(/[(]?\s*(-?\d+\.\d+)/)) {
+        inputUbicacion.value = "Buscando dirección...";
+    }
+
+    try {
+        const urlNominatim = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+        const resNom = await fetch(urlNominatim, { signal: AbortSignal.timeout(4000) });
+        if (resNom.ok) {
+            const data = await resNom.json();
+            if (data && data.address) {
+                const addr = data.address;
+                let partes = [];
+                if (addr.road) partes.push(addr.road);
+                else if (addr.neighbourhood) partes.push(addr.neighbourhood);
+                const ciudad = addr.city || addr.town || addr.village || addr.municipality;
+                if (ciudad) partes.push(ciudad);
+                if (partes.length > 0) {
+                    inputUbicacion.value = partes.join(', ');
+                    return;
+                }
+            }
+        }
+    } catch(e) {} // Falla silenciosa, pasa al intento 2
+
+    try {
+        const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImZmY2VkMzZhOTM4YjQ1MTliZjg4Y2M3ZTk3N2E5ZmQ4IiwiaCI6Im11cm11cjY0In0='; 
+        const urlORS = `https://api.openrouteservice.org/geocode/reverse?api_key=${orsApiKey}&point.lon=${lng}&point.lat=${lat}`;
+        const resORS = await fetch(urlORS, { signal: AbortSignal.timeout(4000) });
+        if (resORS.ok) {
+            const data = await resORS.json();
+            if (data.features && data.features.length > 0) {
+                const props = data.features[0].properties;
+                let partes = [];
+                if (props.street) partes.push(props.street);
+                if (props.locality) partes.push(props.locality);
+                else if (props.county) partes.push(props.county);
+                inputUbicacion.value = partes.length > 0 ? partes.join(', ') : (props.name || "Ubicación en mapa");
+                return;
+            }
+        }
+    } catch(e) {}
+
+    inputUbicacion.value = "Ubicación fijada en mapa";
+}
+
+function initLeafletMap() {
+    if (map) { setTimeout(() => map.invalidateSize(), 100); return; }
+    
+    // 🔥 FIX: Volvemos a SVG pero con un "padding" enorme.
+    // Esto mantiene tu filtro negro perfecto sin que se corte al arrastrar la pantalla.
+    const customRenderer = L.svg({ padding: 2.5 });
+
+    map = L.map('map-preview', { zoomControl: false, renderer: customRenderer }).setView([10.2543, -68.0101], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CARTO'
+    }).addTo(map);
+
+    document.getElementById('map-wrapper').addEventListener('touchstart', function() {
+        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, { passive: true });
+    
+    map.on('dragstart', function() {
+        document.getElementById('map-wrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    map.on('zoomend', function() {
+        updateMarkerScales(map);
+    });
+
+    if (typeof misZonasGeoJSON !== 'undefined') {
+        zonesGeoLayer = L.geoJSON(misZonasGeoJSON, {
+            style: (f) => ({ color: f.properties.fill || "#E30613", weight: 2, fillColor: f.properties.fill || "#E30613", fillOpacity: 0.15 }),
+            interactive: false 
+        }).addTo(map);
+    }
+}
+
+
+
+function updateMarkerScales(mapInstance) {
+    if(!mapInstance) return;
+    const zoom = mapInstance.getZoom();
+    let scale = 1;
+    if (zoom <= 11) scale = 0.6;
+    else if (zoom === 12) scale = 0.75;
+    else if (zoom === 13) scale = 0.9;
+    
+    const containers = mapInstance.getContainer().querySelectorAll('.sede-marker-content');
+    containers.forEach(el => el.style.setProperty('--map-icon-scale', scale));
+}
+
+function updateCheckoutSede(id) { 
+    if(db?.sedes) {
+        checkoutSede = db.sedes.find(s => s.ID_SEDE === id) || currentSede; 
+        
+        const selects = document.querySelectorAll('.checkout-sede-select');
+        selects.forEach(sel => { if(sel.value !== id) sel.value = id; });
+
+        if (checkoutType === 'delivery' && userMarker) {
+            if (rutaLayer && map) { map.removeLayer(rutaLayer); rutaLayer = null; }
+            const pos = userMarker.getLatLng();
+            renderMapPosition(pos.lat, pos.lng, true); // Evita que auto-salte
+        } else if (checkoutType === 'pickup') {
+            renderPickupMap();
+        }
+    }
+}
+async function renderMapPosition(lat, lng, preventAutoSelect = false) {
+    if(!checkoutSede) return;
+    
+    setTimeout(() => { if(map) map.invalidateSize(); }, 100); 
+const [sedeLatFocus, sedeLngFocus] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+map.fitBounds([[lat, lng], [sedeLatFocus, sedeLngFocus]], { padding: [50, 50], maxZoom: 13 }); 
+     
+    
+   const activeIcon = isManualLocation ? redPinIcon : greenDotIcon;
+    
+    // --- NUEVO: AUTO-SELECCIONAR SEDE MÁS CERCANA (SOLO SI ESTÁ ABIERTA) ---
+    if (!preventAutoSelect) {
+        let distMinima = Infinity;
+        let closestSedeCalculada = checkoutSede;
+        db.sedes.forEach(s => {
+            const isOpen = getSchedule(s).isOpen;
+            if (isOpen) { // <-- Condición crítica añadida
+                const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+                const dist = calcularDistanciaHaversine(lat, lng, sLat, sLng);
+                if (dist < distMinima) {
+                    distMinima = dist;
+                    closestSedeCalculada = s;
+                }
+            }
+        });
+
+        if (closestSedeCalculada && closestSedeCalculada.ID_SEDE !== checkoutSede.ID_SEDE) {
+            checkoutSede = closestSedeCalculada;
+            document.querySelectorAll('.checkout-sede-select').forEach(sel => sel.value = checkoutSede.ID_SEDE);
+            
+            // Actualizar también el select de la vista Cajera si existe
+            const adminSel = document.getElementById('cajera-sede');
+            if(adminSel) adminSel.value = checkoutSede.ID_SEDE;
+        }
+    }
+    // ------------------------------------------------------------
+
+    if (userMarker) {
+        userMarker.setLatLng([lat, lng]);
+        userMarker.setIcon(activeIcon);
+        userMarker.dragging.disable();
+    } else {
+        userMarker = L.marker([lat, lng], { draggable: false, icon: activeIcon }).addTo(map);
+    }
+
+    marcadoresSedesMap.forEach(m => map.removeLayer(m));
+    marcadoresSedesMap = [];
+    
+    db.sedes.forEach(s => {
+        const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+        const isSelected = (s.ID_SEDE === checkoutSede.ID_SEDE);
+        const sched = getSchedule(s);
+        
+        const dotColor = sched.isOpen ? '#39FF14' : '#ff0000';
+        const dotShadow = sched.isOpen ? 'rgba(57,255,20,0.8)' : 'rgba(255,0,0,0.8)';
+        
+        let iconWrapperClass = "";
+        let letreroClass = "";
+        
+        // LÓGICA DE ETIQUETA "MÁS CERCA"
+        let isClosest = (sedeMasCercanaCalculada && sedeMasCercanaCalculada.ID_SEDE === s.ID_SEDE);
+        let badgeCerca = isClosest ? `<div class="absolute -top-5 bg-blue-500 text-white text-[9px] font-black px-2 py-0.5 rounded border border-blue-300 uppercase shadow-[0_0_10px_rgba(59,130,246,0.8)] whitespace-nowrap z-50 animate-bounce">¡MÁS CERCA!</div>` : '';
+
+        if (!isSelected) {
+            if (sched.isOpen) {
+                iconWrapperClass = "scale-[0.85] brightness-75 opacity-95"; 
+                letreroClass = "opacity-80 scale-[0.95]";
+            } else {
+                iconWrapperClass = "scale-[0.85] grayscale opacity-60 brightness-75"; 
+                letreroClass = "opacity-60 scale-[0.95]";
+            }
+        }
+
+        const iconHtml = `
+            <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative ${isSelected ? 'selected-sede z-[500]' : 'z-[400]'}" onclick="event.stopPropagation(); updateCheckoutSede('${s.ID_SEDE}')">
+                ${badgeCerca}
+                <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${iconWrapperClass}">
+                    <span class="material-symbols-outlined text-white" style="font-size: 22px; font-variation-settings: 'FILL' 1;">storefront</span>
+                </div>
+                <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${letreroClass}">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotShadow};"></span>
+                        <span class="text-[9px] font-black text-white uppercase leading-none tracking-widest">COMBOX</span>
+                    </div>
+                    <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 truncate max-w-[80px] text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+                </div>
+            </div>`;
+            
+        const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+        marcadoresSedesMap.push(L.marker([sLat, sLng], { icon }).addTo(map));
+    });
+
+    updateMarkerScales(map); 
+
+   // 🔥 FIX APLICADO: Borramos la ruta vieja inmediatamente y mostramos que estamos calculando
+    if (rutaLayer && map) {
+        map.removeLayer(rutaLayer);
+        rutaLayer = null;
+    }
+    document.getElementById('map-header-title').innerText = `CALCULANDO...`;
+
+    // 👇 NUEVA LÍNEA AÑADIDA AQUÍ 👇
+    actualizarInputDireccion(lat, lng);
+
+    const [sedeLat, sedeLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+    
+   // --- URLs DE AMBOS SERVICIOS (PRINCIPAL Y RESPALDO) ---
+    const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImZmY2VkMzZhOTM4YjQ1MTliZjg4Y2M3ZTk3N2E5ZmQ4IiwiaCI6Im11cm11cjY0In0='; // IMPORTANTE: Pega tu API de ORS aquí
+    const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${orsApiKey}&start=${sedeLng},${sedeLat}&end=${lng},${lat}`;
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sedeLng},${sedeLat};${lng},${lat}?overview=full&geometries=geojson`;
+
+    // --- CACHÉ UNIFICADO (10 MINUTOS) ---
+    const cacheKey = `ruta_unificada_${checkoutSede.ID_SEDE}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    const cachedDataStr = localStorage.getItem(cacheKey);
+    let routeInfo = null;
+
+    if (cachedDataStr) {
+        const cachedObj = JSON.parse(cachedDataStr);
+        if (Date.now() - cachedObj.time < 600000) {
+            routeInfo = cachedObj.data; // Cargamos la ruta sin importar quién la generó
+        }
+    }
+
+    try {
+        if (!routeInfo) {
+            // --- INTENTO 1: OPENROUTESERVICE ---
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const resOrs = await fetch(orsUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!resOrs.ok) throw new Error("ORS falló");
+                const dataOrs = await resOrs.json(); // <--- AQUÍ OBTENEMOS LOS DATOS
+                
+                if (dataOrs.features && dataOrs.features.length > 0) {
+                    const rutasOrdenadas = dataOrs.features.sort((a, b) => 
+                        a.properties.summary.distance - b.properties.summary.distance
+                    );
+                    const route = rutasOrdenadas[0];
+                    routeInfo = {
+                        distanceKm: route.properties.summary.distance / 1000,
+                        durationMin: Math.ceil(route.properties.summary.duration / 60),
+                        geometry: route.geometry,
+                        proveedor: 'ORS'
+                    };
+                }
+            } catch (errorOrs) {
+                console.warn("⚠️ ORS fallido, usando OSRM...");
+                
+                // --- INTENTO 2: OSRM ---
+                const resOsrm = await fetch(osrmUrl);
+                if (!resOsrm.ok) throw new Error("OSRM falló");
+                const dataOsrm = await resOsrm.json(); // <--- AQUÍ OBTENEMOS LOS DATOS
+                
+                if (dataOsrm.code === 'Ok' && dataOsrm.routes && dataOsrm.routes.length > 0) {
+                    const rutasOrdenadas = dataOsrm.routes.sort((a, b) => a.distance - b.distance);
+                    const route = rutasOrdenadas[0];
+                    routeInfo = {
+                        distanceKm: route.distance / 1000,
+                        durationMin: Math.ceil(route.duration / 60),
+                        geometry: route.geometry,
+                        proveedor: 'OSRM'
+                    };
+                }
+            }
+            
+            if (routeInfo) {
+                localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: routeInfo }));
+            }
+        }
+ 
+
+        // --- RENDERIZADO VISUAL Y CÁLCULO DE TARIFAS ---
+        if (routeInfo) {
+            const distanceKm = routeInfo.distanceKm;
+            const durationMin = routeInfo.durationMin;
+
+            const min = parseFloat(checkoutSede.TARIFA_MINIMA) || 1.5; 
+            let rawPrice = distanceKm * (parseFloat(checkoutSede.TARIFA_POR_KM) || 1);
+            let decimalPart = rawPrice % 1;
+            let roundedPrice = Math.floor(rawPrice) + (decimalPart >= 0.6 ? 1 : 0);
+
+            tarifaFinalCalculada = Math.max(min, roundedPrice);
+            let displayPrice = (tarifaFinalCalculada % 1 === 0) ? tarifaFinalCalculada.toString() : tarifaFinalCalculada.toFixed(2);
+
+            document.getElementById('map-header-title').innerText = `${displayPrice}$`;
+            document.getElementById('route-km').innerText = `${distanceKm.toFixed(1)} km`;
+            document.getElementById('route-time').innerText = `${durationMin} min`;
+
+            // Dibujamos la línea verde unificada
+            if (rutaLayer) map.removeLayer(rutaLayer);
+            rutaLayer = L.geoJSON(routeInfo.geometry, {
+                style: { color: '#39FF14', weight: 4, opacity: 0.8, dashArray: '8, 8' }
+            }).addTo(map);
+
+            map.fitBounds(rutaLayer.getBounds(), { padding: [40, 40] });
+            setTimeout(() => {
+                if(map) map.invalidateSize();
+                updateMarkerScales(map);
+            }, 300);
+            
+        } else {
+            throw new Error("Colapso total de APIs de ruteo");
+        }
+
+    } catch (errorFinal) {
+        document.getElementById('map-header-title').innerText = `ERROR DE RUTA`;
+    }
+  }
+
+function showManualLocationInput() {
+    isEditingLocation = true; 
+    
+    document.getElementById('btn-confirm-pin').style.display = 'flex';
+    
+    // Transformar el botón de editar en botón rojo de cancelar
+    const btnEdit = document.getElementById('btn-wrong-location');
+    btnEdit.style.display = 'flex';
+    
+btnEdit.className = "absolute bottom-3 left-3 z-[1000] w-10 h-10 bg-red-600 backdrop-blur-md border border-red-400 rounded-full flex items-center justify-center text-white active:scale-90 shadow-lg transition-transform";
+    btnEdit.innerHTML = '<span class="material-symbols-outlined text-[18px]">close</span>';
+    btnEdit.onclick = cancelManualLocationInput; // Cambia la función al presionar
+
+    const locInput = document.getElementById('checkout-location');
+    locInput.placeholder = "Mueve el mapa para ubicar tu dirección";
+    
+    // Eliminamos la ruta verde de inmediato para limpiar el mapa visualmente
+    if (rutaLayer && map) {
+        map.removeLayer(rutaLayer);
+        rutaLayer = null;
+    }
+    
+    document.getElementById('map-header-title').innerText = `--`;
+    document.getElementById('route-km').innerText = `-- km`;
+    document.getElementById('route-time').innerText = `-- min`;
+
+    setTimeout(() => { if(map) map.invalidateSize(); }, 150);
+
+    if (userMarker) {
+        savedLatLngBeforeEdit = userMarker.getLatLng(); // Guardamos por si cancela
+        userMarker.setIcon(redPinIcon);
+        userMarker.setLatLng(map.getCenter());
+        pendingLatLng = map.getCenter();
+    } else {
+        savedLatLngBeforeEdit = null;
+    }
+    
+    map.on('move', function() {
+        if(isEditingLocation && userMarker) {
+            userMarker.setLatLng(map.getCenter());
+        }
+    });
+    
+    map.on('moveend', function() {
+        if(isEditingLocation) {
+            pendingLatLng = map.getCenter();
+        }
+    });
+
+    document.getElementById('map-wrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// NUEVA FUNCIÓN PARA CANCELAR EDICIÓN
+function cancelManualLocationInput() {
+    isEditingLocation = false; // Esto desactiva el movimiento del pin de forma segura
+    document.getElementById('manual-location-wrapper').style.display = 'none';
+    document.getElementById('btn-confirm-pin').style.display = 'none';
+    
+    resetEditLocationButton();
+
+    // Reajustar el tamaño del mapa para evitar cuadros grises
+    if (map) { 
+        setTimeout(() => map.invalidateSize(), 300); 
+    }
+
+    // Ponemos texto de carga para que no se quede en blanco
+    let headerTitle = document.getElementById('map-header-title');
+    if(headerTitle) headerTitle.innerText = "Restaurando ruta...";
+
+    // Regresamos a la ubicación anterior y volvemos a trazar la ruta verde
+    if (savedLatLngBeforeEdit) {
+        renderMapPosition(savedLatLngBeforeEdit.lat, savedLatLngBeforeEdit.lng);
+    } else {
+        getLocation();
+    }
+}
+
+// NUEVA FUNCIÓN PARA RESTAURAR EL BOTÓN A SU ESTADO ORIGINAL
+function showLocationHelp() {
+    // Reemplazamos el título para añadir el botón X nativo en la cabecera
+    document.getElementById('dialog-title').innerHTML = `
+        <div class="flex justify-between items-center w-full">
+            <span>Ajustar Ubicación</span>
+            <button onclick="closeCustomDialog()" class="text-white bg-white/10 w-8 h-8 rounded-full flex items-center justify-center active:scale-90">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>`;
+    document.getElementById('dialog-title').className = "text-white font-black text-lg uppercase tracking-widest mb-4 w-full text-left";
+
+    // Inyectamos el diseño completamente nuevo
+   document.getElementById('dialog-msg').innerHTML = `
+        <div class="flex flex-col gap-4 text-left w-full">
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Mover pin en el mapa</label>
+                <button onclick="closeCustomDialog(); showManualLocationInput();" class="w-full bg-[#1A1A1A] border border-white/10 text-white font-black py-3 rounded-xl text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    Editar en el mapa <span class="material-symbols-outlined text-[16px]">edit_location_alt</span>
+                </button>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Pegar coordenadas (Lat, Lng)</label>
+                <input type="text" id="manual-coord-input" class="w-full bg-[#1A1A1A] border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000]" placeholder="Ej: 10.254, -68.010" oninput="checkManualCoords(this.value)">
+            </div>
+            <div class="bg-red-500/10 border border-red-500/20 p-3 rounded-xl mt-2">
+                <p class="text-[10px] text-red-200 font-bold leading-tight">
+                    <span class="material-symbols-outlined text-[12px] align-middle text-red-500">warning</span>
+                    Si tienes problema con tu ubicación actual asegúrate de haber permitido el acceso a la ubicación, si denegaste presiona los ajustes de la página al lado del URL y acepta los permisos de ubicación.
+                </p>
+            </div>
+        </div>
+    `;
+    document.getElementById('dialog-msg').className = "w-full";
+    document.getElementById('dialog-buttons').innerHTML = ''; // Ocultamos los botones viejos de abajo
+    toggleModal('custom-dialog-modal', true);
+}
+
+function checkManualCoords(val) {
+    const coincidencia = val.match(/[(]?\s*(-?\d+\.\d+)\s*[,;\s]+\s*(-?\d+\.\d+)\s*[)]?/);
+    if(coincidencia) {
+        const lat = parseFloat(coincidencia[1]);
+        const lng = parseFloat(coincidencia[2]);
+        closeCustomDialog();
+        document.getElementById('checkout-location').value = val;
+        isEditingLocation = false;
+        isManualLocation = true;
+        if(map) {
+            document.getElementById('map-wrapper').style.display = 'block';
+            renderMapPosition(lat, lng);
+        }
+    }
+}
+
+function resetEditLocationButton() {
+    const btnEdit = document.getElementById('btn-wrong-location');
+    if (btnEdit) {
+        btnEdit.style.display = 'flex';
+        
+btnEdit.className = "absolute bottom-3 left-3 z-[1000] bg-black/60 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl text-zinc-300 font-bold shadow-lg text-[9px] uppercase flex items-center gap-1 active:scale-95 transition-transform";
+        btnEdit.innerHTML = '<span class="material-symbols-outlined text-[12px] text-yellow-400">help</span> ¿No es aquí?';
+        btnEdit.onclick = showLocationHelp;
+    }
+}
+
+function confirmManualPin() {
+    isEditingLocation = false;
+    isManualLocation = true; // Fuerza a mostrar el pin rojo
+    document.getElementById('btn-confirm-pin').style.display = 'none';
+    
+    resetEditLocationButton(); // AQUI RESTAURAMOS EL BOTON
+    
+    let headerTitle = document.getElementById('map-header-title');
+    if(headerTitle) headerTitle.innerText = "CALCULANDO...";
+
+    // Garantizamos que si pendingLatLng está vacío, forzamos a tomar el centro actual
+    let latlngFinal = pendingLatLng || map.getCenter();
+    if(latlngFinal) {
+        renderMapPosition(latlngFinal.lat, latlngFinal.lng);
+    }
+
+    if (typeof map !== 'undefined' && map !== null) {
+        setTimeout(() => map.invalidateSize(), 400); 
+    }
+}
+
+
+
+
+function getLocation(userInitiated = false) {
+    isEditingLocation = false;
+    isManualLocation = false; // Vuelve a modo GPS (verde)
+    document.getElementById('btn-confirm-pin').style.display = 'none';
+    document.getElementById('manual-location-wrapper').style.display = 'none';
+    
+    // Restauramos el botón a su estado original de "Editar" (lápiz)
+    resetEditLocationButton(); 
+    
+    const locInput = document.getElementById('checkout-location');
+    if(locInput) locInput.value = '';
+
+    const headerTitle = document.getElementById('map-header-title');
+    if (headerTitle) headerTitle.innerText = "BUSCANDO...";
+    
+    initLeafletMap(); 
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // GPS exitoso: renderiza la posición del usuario
+                renderMapPosition(position.coords.latitude, position.coords.longitude);
+            },
+            function(error) {
+                // Si el GPS falla o el usuario lo rechaza
+                if(headerTitle) headerTitle.innerText = "ACTIVAR GPS";
+                
+                // Eliminar cualquier pin de usuario o ruta existente
+                if (userMarker && map) { map.removeLayer(userMarker); userMarker = null; }
+                if (rutaLayer && map) { map.removeLayer(rutaLayer); rutaLayer = null; }
+                document.getElementById('route-km').innerText = `-- km`;
+                document.getElementById('route-time').innerText = `-- min`;
+                
+                // Mostrar siempre los marcadores de las sedes aunque no haya ruta
+                if(map && db && db.sedes) {
+                    marcadoresSedesMap.forEach(m => map.removeLayer(m));
+                    marcadoresSedesMap = [];
+                    db.sedes.forEach(s => {
+                        const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+                        const sched = getSchedule(s);
+                        const isSelected = checkoutSede && checkoutSede.ID_SEDE === s.ID_SEDE;
+                        let letreroClass = sched.isOpen ? "" : "opacity-60";
+let iconWrapperClass = sched.isOpen ? "" : "grayscale opacity-60";
+if (!isSelected) { iconWrapperClass += " brightness-75 scale-90"; letreroClass += " opacity-80"; }
+
+const dotColor = sched.isOpen ? '#39FF14' : '#ff0000';
+const dotShadow = sched.isOpen ? 'rgba(57,255,20,0.8)' : 'rgba(255,0,0,0.8)';
+
+const iconHtml = `
+    <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative z-[400]" onclick="event.stopPropagation(); updateCheckoutSede('${s.ID_SEDE}')">
+        <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${iconWrapperClass}">
+            <span class="material-symbols-outlined text-white" style="font-size: 22px; font-variation-settings: 'FILL' 1;">storefront</span>
+        </div>
+        <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${letreroClass}">
+            <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotShadow};"></span>
+                <span class="text-[9px] font-black text-white uppercase leading-none tracking-widest">COMBOX</span>
+            </div>
+            <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 truncate max-w-[80px] text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+        </div>
+    </div>`;
+                        const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+                        marcadoresSedesMap.push(L.marker([sLat, sLng], { icon }).addTo(map));
+                    });
+                }
+                
+                if (checkoutSede && map) {
+                    const [lat, lng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+                    map.setView([lat, lng], 14);
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    } else {
+        // Si el navegador no soporta geolocalización
+        if(headerTitle) headerTitle.innerText = "ACTIVAR GPS";
+        if (userMarker && map) { map.removeLayer(userMarker); userMarker = null; }
+        if (rutaLayer && map) { map.removeLayer(rutaLayer); rutaLayer = null; }
+        if (checkoutSede && map) {
+            const [lat, lng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+            map.setView([lat, lng], 14);
+        }
+    }
+}
+
+
+
+
+
+
+
+    
+            function submitOrder() {
+        const name = document.getElementById('checkout-name').value.trim();
+        const phone = document.getElementById('checkout-phone').value.trim();
+
+        if(!name) { customAlert('Ingresa tu nombre.'); document.getElementById('checkout-name').focus(); return; }
+        if(!phone) { customAlert('Ingresa tu teléfono.'); document.getElementById('checkout-phone').focus(); return; }
+        
+        localforage.setItem('combox_cliente_nombre', name).catch(e => console.error(e));
+        localforage.setItem('combox_cliente_telefono', phone).catch(e => console.error(e));
+        
+        let telefono = checkoutSede?.TELEFONO || '584244701273';
+        let nombreSede = checkoutSede?.NOMBRE_SEDE || '';
+        
+        let total = 0;
+        const allItems = getAllSourceData();
+        let itemsText = '';
+        
+        Object.keys(cart).forEach(id => {
+            const p = allItems.find(x => getUnifiedId(x) === id);
+            if(!p) return;
+            const price = getProductPrice(p);
+            const priceStr = price === 0 ? 'Por cotizar' : `${price}$ c/u`;
+            itemsText += `- *${p.nombre.toUpperCase()}*\nCant:  \`${cart[id]}\`  |  \`${priceStr}\`\n\n`;
+            total += price * cart[id];
+        });
+
+        const date = new Date();
+        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+        const dateStr = `(_${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}_)`;
+
+        const cartStr = Object.entries(cart).map(([id, qty]) => `${id}-${qty}`).join('_');
+        const cartUrl = `${window.location.origin}${window.location.pathname}?pedido=${cartStr}`;
+        
+        let msg = '';
+        
+        if(checkoutType === 'delivery') {
+            let locationData = "";
+
+            const isManual = document.getElementById('manual-location-wrapper').style.display !== 'none';
+
+            if(isManual) {
+                // Si el usuario escribió la dirección a mano
+                locationData = document.getElementById('checkout-location').value;
+            } else if(userMarker) {
+                // Si el usuario usó el GPS del mapa
+                const lat = userMarker.getLatLng().lat;
+                const lng = userMarker.getLatLng().lng;
+                
+                // Tomamos el nombre de la calle que se autocompletó en el input
+                const nombreCalleGPS = document.getElementById('checkout-location').value || "Ubicación en mapa";
+                
+                locationData = `📝 Ref: ${nombreCalleGPS}\n📍 GPS: http://googleusercontent.com/maps.google.com/?q=${lat},${lng}\n💰 TARIFA DELIVERY: $${tarifaFinalCalculada.toFixed(2)}`;
+            } else {
+                locationData = "Ubicación no especificada (Contactar al cliente)";
+            }
+
+            msg = `🛵 *SOLICITUD DE DELIVERY*\n${dateStr}\n\n\n`;
+            msg += `🏢 *SEDE:* \`${nombreSede}\`\n\n`;
+            msg += `👤 *CLIENTE:*  \`${name}\` \n`;
+            msg += `☎️ *TELEFONO:* ${phone}\n\n`;
+            msg += `📍 *UBICACION:*\n${locationData}\n\n\n`;
+            msg += `📦 *PEDIDO:*\n\n${itemsText}`;
+            msg += `*TOTAL (SIN DELIVERY Ni IVA):* \`$${total.toFixed(2)}\`\n\n`;
+            msg += `____________________________________\n\n`;
+            msg += `> 🛒 *LINK CARRITO:* ${cartUrl}`;
+        } else {
+            msg = `🚘 *SOLICITUD DE PICK-UP*\n${dateStr}\n\n\n`;
+            msg += `🏢 *SEDE:* \`${nombreSede}\`\n\n`;
+            msg += `👤 *CLIENTE:*  \`${name}\` \n`;
+            msg += `☎️ *TELEFONO:* ${phone}\n\n\n`;
+            msg += `📦 *PEDIDO:*\n\n${itemsText}`;
+            msg += `*TOTAL (SIN IVA):* \`$${total.toFixed(2)}\`\n\n`;
+            msg += `____________________________________\n\n`;
+            msg += `> 🛒 *LINK CARRITO:* ${cartUrl}`;
+        }
+        
+        window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+
+        function getSchedule(sede) {
+        const now = new Date();
+        let day = now.getDay();
+        const days = ["DOMINGO","LUNES","MARTES","MIERCOLES","JUEVES","VIERNES","SABADO"];
+        const dayNamesEs = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+        const format = d => d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true});
+        
+        let dayName = days[day];
+        let openIso = sede[`${dayName}_APERTURA`], closeIso = sede[`${dayName}_CIERRE`];
+        
+        const getNextOpen = () => {
+            for(let i=1; i<=7; i++) {
+                let nextIdx = (day + i) % 7;
+                let nextOpenIso = sede[`${days[nextIdx]}_APERTURA`];
+                if(nextOpenIso) {
+                    let openDate = new Date(nextOpenIso);
+                    let dayStr = i === 1 ? "Mañana" : dayNamesEs[nextIdx];
+                    return { isOpen: false, text: "Cerrado", nextTime: `Abre ${dayStr} las ${format(openDate)}` };
+                }
+            }
+            return { isOpen: false, text: "Cerrado temporalmente", nextTime: "" };
+        };
+
+        if(!openIso || !closeIso) return getNextOpen();
+        
+        let openDate = new Date(openIso), closeDate = new Date(closeIso);
+        let openMins = openDate.getHours()*60+openDate.getMinutes(), 
+            closeMins = closeDate.getHours()*60+closeDate.getMinutes(), 
+            nowMins = now.getHours()*60+now.getMinutes();
+            
+        let isOpen = false;
+        if(closeMins < openMins) { if(nowMins >= openMins || nowMins <= closeMins) isOpen = true; } 
+        else { if(nowMins >= openMins && nowMins <= closeMins) isOpen = true; }
+        
+        if (isOpen) {
+            return { isOpen: true, text: "Abierto", nextTime: `Cierra a las ${format(closeDate)}` };
+        } else {
+            if (nowMins < openMins) {
+                return { isOpen: false, text: "Cerrado", nextTime: `Abre hoy a las ${format(openDate)}` };
+            } else {
+                return getNextOpen();
+            }
+        }
+    }
+
+    let isFoodRaining = false;
+function triggerFoodRain() {
+    // Si ya está cayendo, ignoramos el toque para que termine fluidamente
+    if (isFoodRaining) return; 
+    isFoodRaining = true;
+
+    const bgContainer = document.getElementById('header-rain-bg');
+    const fgContainer = document.getElementById('header-rain-fg');
+    
+    if(!bgContainer || !fgContainer) {
+        isFoodRaining = false;
+        return;
+    }
+
+    bgContainer.innerHTML = '';
+    fgContainer.innerHTML = '';
+    
+    const foodEmojis = ['🍔', '🌭', '🍕']; 
+    
+    const totalBgDrops = 0; 
+    for (let i = 0; i < totalBgDrops; i++) {
+        const drop = document.createElement('span');
+        drop.className = 'food-drop-bg';
+        drop.innerText = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
+        drop.style.left = `${Math.random() * 100}%`;
+        drop.style.fontSize = `${14 + Math.random() * 10}px`; 
+        drop.style.animationDuration = `${4 + Math.random() * 3}s`; 
+        // Reducido a 0.3s máximo para que aparezcan enseguida
+        drop.style.animationDelay = `${Math.random() * 0.3}s`;
+        bgContainer.appendChild(drop);
+    }
+
+    const totalFgDrops = 6; 
+    for (let i = 0; i < totalFgDrops; i++) {
+        const drop = document.createElement('span');
+        drop.className = 'food-drop-fg';
+        drop.innerText = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
+        drop.style.left = `${Math.random() * 100}%`;
+        drop.style.fontSize = `${28 + Math.random() * 15}px`; 
+        drop.style.animationDuration = `${3 + Math.random() * 2}s`; 
+        // Reducido a 0.1s máximo
+        drop.style.animationDelay = `${Math.random() * 0.1}s`;
+        fgContainer.appendChild(drop);
+    }
+
+    setTimeout(() => {
+        bgContainer.innerHTML = '';
+        fgContainer.innerHTML = '';
+        isFoodRaining = false; // Liberamos el candado para permitir otro toque
+    }, 7000);
+}
+    function updateHeader() {
+        if(!currentSede) return;
+        document.getElementById('current-location-label').innerText = currentSede.NOMBRE_SEDE;
+        const sched = getSchedule(currentSede);
+        document.getElementById('header-status-text').innerText = sched.isOpen ? `Abiertos hasta ${sched.nextTime.replace('Cierra ','')}` : `Cerrado. ${sched.nextTime}`;
+        const dot = document.getElementById('header-status-dot');
+        dot.className = `w-1.5 h-1.5 rounded-full ${sched.isOpen ? 'bg-neon-accent animate-pulse shadow-[0_0_8px_#39FF14]' : 'bg-red-500 animate-pulse shadow-[0_0_8px_#ff0000]'}`;
+    }
+    
+       function renderSedesModal() {
+        const sorted = getSortedSedes();
+        document.getElementById('sedes-list-container').innerHTML = sorted.map(s => {
+            const sched = getSchedule(s);
+            const active = currentSede?.ID_SEDE === s.ID_SEDE;
+            const [main, sub] = s.NOMBRE_SEDE.split(',');
+            
+            const bgClass = active ? 'bg-zinc-800/90 border-zinc-500 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'bg-white/5 border-white/10';
+            const iconClass = active ? 'bg-primary text-white shadow-[0_0_10px_rgba(227,6,19,0.5)]' : 'bg-white/5 text-white/30';
+            
+            // LÓGICA NUEVA: Verificamos si esta sede es la calculada por el GPS
+            const esLaMasCercana = (sedeMasCercanaCalculada && sedeMasCercanaCalculada.ID_SEDE === s.ID_SEDE);
+
+            return `<button class="w-full flex items-center justify-between p-4 md:p-5 rounded-3xl ${bgClass} border transition-all relative overflow-hidden" onclick="selectLocation('${s.ID_SEDE}')">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-10 h-10 flex-shrink-0 md:w-12 md:h-12 rounded-2xl ${iconClass} flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px] md:text-[24px]">storefront</span>
+                    </div>
+                    <div class="flex flex-col items-start min-w-0 flex-1">
+                        <span class="block text-white font-bold text-base md:text-lg truncate leading-tight">${sanitizeHTML(main)}</span>
+                        <span class="block text-[9px] md:text-[10px] text-zinc-400 uppercase font-black truncate">${sanitizeHTML(sub?.trim() || 'Sucursal')}</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div class="flex items-center gap-1.5 flex-shrink-0 ${sched.isOpen ? 'bg-neon-accent/10 border-neon-accent/20' : 'bg-red-500/10 border-red-500/20'} px-2 py-1 rounded-full border">
+                        <span class="w-1.5 h-1.5 flex-shrink-0 rounded-full ${sched.isOpen ? 'bg-neon-accent' : 'bg-red-500'}"></span>
+                        <span class="text-[8px] md:text-[9px] font-black whitespace-nowrap ${sched.isOpen ? 'text-neon-accent' : 'text-red-500'} uppercase">${sched.text}</span>
+                    </div>
+                    <!-- LÓGICA NUEVA: Si es la más cercana, inyectamos la etiqueta -->
+                    ${esLaMasCercana ? '<span class="bg-blue-500/20 text-blue-400 text-[8px] font-black px-2 py-0.5 rounded border border-blue-500/30 uppercase tracking-widest mt-1">¡Más Cerca!</span>' : ''}
+                </div>
+            </button>`;
+        }).join('');
+    }
+
+    
+    function selectLocation(id) { 
+        if(db?.sedes) {
+            currentSede = db.sedes.find(s => s.ID_SEDE === id) || currentSede; 
+            localforage.setItem('combox_sede_id', currentSede.ID_SEDE);
+        }
+        updateHeader(); 
+        if(window.navigator.vibrate) window.navigator.vibrate(10); 
+        setTimeout(() => toggleModal('sedes-modal', false), 50); 
+    }
+
+    function getSourceData() { if(!db) return []; if(currentType === 'Combos') return db.combos || []; if(currentType === 'Individual') return db.catalogo || []; if(currentType === 'Servicios') return (db.catalogo || []).filter(p => p.tipo === 'Servicios'); return []; }
+    function getAllSourceData() { return [...(db?.catalogo || []), ...(db?.combos || [])]; }
+    
+    function getProductPrice(p) { 
+        if(p.precios) { 
+            if(p.promocion?.activa && p.precios.promo > 0) return parseFloat(p.precios.promo); 
+            return parseFloat(p.precios.normal || 0); 
+        } 
+        if(p.precio_promo && parseFloat(p.precio_promo) > 0) return parseFloat(p.precio_promo); 
+        return parseFloat(p.precio || 0); 
+    }
+    
+    function getUnifiedId(p) { return (p.id || p.id_producto || p.ID_PRODUCTO_VENTA || '').toString(); }
+
+    function getLevenshtein(a, b) {
+        if(a.length === 0) return b.length;
+        if(b.length === 0) return a.length;
+        let prevRow = Array.from({length: b.length + 1}, (_, i) => i);
+        for (let i = 0; i < a.length; i++) {
+            let currRow = [i + 1];
+            for (let j = 0; j < b.length; j++) {
+                let cost = a[i] === b[j] ? 0 : 1;
+                currRow.push(Math.min(currRow[j] + 1, prevRow[j + 1] + 1, prevRow[j] + cost));
+            }
+            prevRow = currRow;
+        }
+        return prevRow[b.length];
+    }
+
+    function getSearchScore(query, text) {
+        if (!query) return 1;
+        
+        const normalize = (s) => {
+            let str = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '');
+            str = str.replace(/(\d+)\s+(kg|gr|g|lt|l|ml|cc|und|u|paq|pqte)\b/gi, '$1$2');
+            return str;
+        };
+        
+        const qClean = normalize(query);
+        const tClean = normalize(text);
+        
+        let score = 0;
+
+        if (tClean === qClean) {
+            score += 1000;
+        } else if (tClean.includes(qClean)) {
+            score += 500;
+        }
+
+        const qWords = qClean.split(/\s+/).filter(w => w.length > 0);
+        const tWords = tClean.split(/\s+/).filter(w => w.length > 0);
+        
+        let allWordsMatch = true;
+
+        for (const qw of qWords) {
+            let wordMatched = false;
+            
+            const isUnit = /^\d+(kg|gr|g|lt|l|ml|cc|und|u|paq|pqte)$/.test(qw);
+
+            if (tClean.includes(qw)) {
+                score += 50;
+                wordMatched = true;
+                
+                if (tWords.includes(qw)) {
+                    score += 150; 
+                    if(isUnit) score += 500; 
+                }
+            } else {
+                const maxTypos = qw.length <= 4 ? 1 : 2; 
+                let bestFuzzy = -1;
+                
+                for (const tw of tWords) {
+                    const limit = Math.min(tw.length, qw.length + Math.floor(maxTypos/2));
+                    const dist = getLevenshtein(qw, tw.substring(0, limit));
+                    
+                    if (dist <= maxTypos) {
+                        wordMatched = true;
+                        let fuzzyScore = 20 - (dist * 5); 
+                        if (fuzzyScore > bestFuzzy) bestFuzzy = fuzzyScore;
+                    }
+                }
+                if (bestFuzzy > 0) score += bestFuzzy;
+            }
+            
+            if (!wordMatched) allWordsMatch = false;
+        }
+
+        return allWordsMatch ? score : 0;
+    }
+
+    function onSearchInput() {
+        const val = document.getElementById('global-search').value.trim();
+        const icon = document.getElementById('search-icon');
+        const tabsContainer = document.getElementById('type-tabs-container');
+        
+        if (val.length > 0) {
+            icon.innerText = 'close';
+            icon.classList.add('text-primary');
+            catalogLimit = 9999; 
+            
+            tabsContainer.classList.add('tabs-hidden');
+
+            if (currentSort !== 'relevancia') {
+                currentSort = 'relevancia';
+            }
+
+            if (currentCat !== 'TODOS') {
+                currentCat = 'TODOS';
+                const menuBtn = document.getElementById('cat-menu-btn');
+                if(menuBtn) {
+                    menuBtn.classList.add('bg-white/10', 'border-white/20');
+                    menuBtn.classList.remove('bg-primary', 'border-primary');
+                }
+            }
+        } else {
+            icon.innerText = 'search';
+            icon.classList.remove('text-primary');
+            catalogLimit = 24; 
+            
+            tabsContainer.classList.remove('tabs-hidden');
+            if (currentSort === 'relevancia') currentSort = 'precio_menor';
+        }
+        
+        clearTimeout(searchRenderTimer);
+        clearTimeout(searchScrollTimer);
+
+        searchRenderTimer = setTimeout(() => {
+            window.requestAnimationFrame(() => {
+                render();
+            });
+            if (val.length > 0) scrollToCatalog();
+        }, 1500); 
+    }
+    
+    function handleSearchEnter(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); 
+            clearTimeout(searchRenderTimer);
+            clearTimeout(searchScrollTimer);
+            if(document.activeElement) document.activeElement.blur(); 
+            
+            window.requestAnimationFrame(() => {
+                render(); 
+                setTimeout(() => {
+                    scrollToCatalog();
+                }, 50); 
+            });
+        }
+    }
+
+    function handleSearchClick() {
+        const input = document.getElementById('global-search');
+        if (input.value.length > 0) {
+            input.value = '';
+            clearCategoryAndKeepScroll(); 
+            onSearchInput(); 
+            clearTimeout(searchRenderTimer);
+            render(); 
+        } else {
+            input.focus();
+        }
+    }
+    
+    function scrollToCatalog() {
+        const grid = document.getElementById('catalog-anchor');
+        if (grid) {
+            const offset = 80; 
+            const y = grid.getBoundingClientRect().top + window.scrollY - offset;
+            
+            window.scrollTo({ top: y, behavior: 'smooth' });
+            
+            setTimeout(() => { lastScrollY = window.scrollY; }, 500); 
+        }
+    }
+
+    function render() { if(!db) return; renderCatalog(); }
+    
+    function showSkeletons() {
+        const grid = document.getElementById('catalog-grid');
+        if(!grid) return;
+        let skeletons = '';
+        for(let i=0; i<6; i++) {
+            skeletons += `
+                <div class="product-card-glass glass-contour skeleton rounded-3xl" style="height: 280px; width: 100%;">
+                    <div class="mt-auto p-4 w-full text-center">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-pill mt-4"></div>
+                    </div>
+                </div>`;
+        }
+        grid.innerHTML = `<div class="auto-grid px-1 pt-4 pb-4">${skeletons}</div>`;
+    }
+
+    function selectCategory(c) {
+        if (currentCat === c) {
+            toggleModal('categories-modal', false);
+            return;
+        }
+        
+        toggleModal('categories-modal', false);
+        
+        setTimeout(() => {
+            showSkeletons();
+            setTimeout(() => {
+                setCat(c);
+            }, 50);
+        }, 150);
+    }
+
+    function renderAllCategories() {
+        const items = getSourceData();
+        const cats = ['TODOS', ...new Set(items.map(p => p.categoria).filter(Boolean))]; 
+        document.getElementById('all-categories-list').innerHTML = cats.map(c => `<button onclick="selectCategory('${c.replace(/'/g, "\\'")}')" class="cat-btn w-full py-4 rounded-2xl text-[10px] font-black uppercase border ${currentCat === c ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white/5 text-zinc-400 border-white/10'}">${sanitizeHTML(c)}</button>`).join('');
+    }
+    
+    function renderPromos() {
+        const section = document.getElementById('promo-section');
+        const today = new Date();
+        const dayNames = ["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"];
+        const currentDay = dayNames[today.getDay()];
+        
+        const promos = getAllSourceData().filter(p => {
+            if(p.promocion?.activa && p.promocion) {
+                const dateOk = p.promocion.hasta ? new Date(p.promocion.hasta) >= today : true;
+                const dayOk = p.promocion.dias?.includes(currentDay) || p.promocion.dias?.includes("Todos Los Dias");
+                return dateOk && dayOk;
+            }
+            return p.precio_promo && parseFloat(p.precio_promo) > 0;
+        });
+        
+        if(promos.length) { 
+            section.classList.remove('hidden');
+            const containerClass = 'flex overflow-x-auto hide-scrollbar flex-nowrap overscroll-x-contain gap-4 px-1 pt-4 pb-4 scroll-smooth';
+            document.getElementById('promo-carousel').className = containerClass;
+            document.getElementById('promo-carousel').innerHTML = promos.map(p => createCard(p, true)).join(''); 
+        }
+        else section.classList.add('hidden');
+    }
+
+    function changeSort(val) {
+        currentSort = val;
+        renderCatalog();
+    }
+
+    function extractUnitValue(name) {
+        if (!name) return 0;
+        const match = name.match(/([\d.,]+)\s*(KG|GR|G|LT|L|ML|CC|UND|U|PAQ|PQTE)\s*$/i);
+        if (match) {
+            let val = parseFloat(match[1].replace(',', '.'));
+            let unit = match[2].toUpperCase();
+            if (unit === 'KG' || unit === 'LT' || unit === 'L') return val * 1000;
+            if (unit === 'GR' || unit === 'G' || unit === 'ML' || unit === 'CC') return val;
+            if (unit === 'UND' || unit === 'U' || unit === 'PAQ' || unit === 'PQTE') return val; 
+            return val;
+        }
+        return 0;
+    }
+    
+    function renderCatalog() {
+        // 🔥 FILTRO ADMIN: Si es la cajera, bloqueamos la carga del catálogo
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('DeliveryAdmin8382727282891')) return;
+    
+        const search = document.getElementById('global-search').value.trim();
+        
+        let items = search !== '' ? getAllSourceData() : getSourceData();
+        
+        if (currentCat === 'PROMOCIONES') {
+            const today = new Date();
+            const dayNames = ["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"];
+            const currentDay = dayNames[today.getDay()];
+            
+            items = items.filter(p => {
+                if(p.promocion?.activa && p.promocion) {
+                    const dateOk = p.promocion.hasta ? new Date(p.promocion.hasta) >= today : true;
+                    const dayOk = p.promocion.dias?.includes(currentDay) || p.promocion.dias?.includes("Todos Los Dias");
+                    return dateOk && dayOk;
+                }
+                return p.precio_promo && parseFloat(p.precio_promo) > 0;
+            });
+        } else if(currentCat !== 'TODOS' && search === '') { 
+            items = items.filter(p => p.categoria === currentCat); 
+        }
+        
+        if(search) {
+            const normalize = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const searchClean = normalize(search);
+
+          items = items.map(p => {
+                let score = getSearchScore(search, p.nombre);
+
+                if (p.categoria && normalize(p.categoria) === searchClean) {
+                    score += 5000;
+                }
+
+                // NUEVO: Códigos de barra añadidos a renderCatalog
+                if (p.codigo_barras && p.codigo_barras.toString().trim() === search) {
+                    score += 10000; 
+                }
+                if (p.id_producto && p.id_producto.toString().trim() === search) {
+                    score += 10000;
+                }
+
+                return {
+                    ...p,
+                    _searchScore: score
+                };
+            }).filter(p => p._searchScore > 0);
+            
+            items.sort((a, b) => {
+                if (currentSort === 'relevancia' || currentSort === 'default') {
+                    if (b._searchScore !== a._searchScore) {
+                        return b._searchScore - a._searchScore;
+                    }
+                }
+                if(currentSort === 'precio_mayor') return getProductPrice(b) - getProductPrice(a);
+                if(currentSort === 'precio_menor') return getProductPrice(a) - getProductPrice(b);
+                if(currentSort === 'pres_mayor') return extractUnitValue(b.nombre) - extractUnitValue(a.nombre);
+                if(currentSort === 'pres_menor') return extractUnitValue(a.nombre) - extractUnitValue(b.nombre);
+                return b._index - a._index;
+            });
+        } else {
+            if(currentSort === 'precio_mayor') items.sort((a, b) => getProductPrice(b) - getProductPrice(a));
+            else if(currentSort === 'precio_menor') items.sort((a, b) => getProductPrice(a) - getProductPrice(b));
+            else if(currentSort === 'pres_mayor') items.sort((a, b) => extractUnitValue(b.nombre) - extractUnitValue(a.nombre));
+            else if(currentSort === 'pres_menor') items.sort((a, b) => extractUnitValue(a.nombre) - extractUnitValue(b.nombre));
+            else items.sort((a, b) => b._index - a._index);
+        }
+        
+        totalFilteredItemsCount = items.length;
+        
+        const isCarousel = currentCat === 'TODOS' && search === '';
+        const paginatedItems = isCarousel ? items : items.slice(0, catalogLimit);
+
+        let grouped = {};
+        if (search) {
+            grouped['RESULTADOS'] = paginatedItems;
+        } else {
+            grouped = paginatedItems.reduce((acc,p) => { const cat = p.categoria || 'VARIOS'; acc[cat] = acc[cat] || []; acc[cat].push(p); return acc; }, {});
+        }
+        
+        const showFilterUI = currentCat !== 'TODOS' || search !== '';
+
+        const filterUI = showFilterUI ? `
+            <div class="relative ml-auto">
+                <select onchange="changeSort(this.value)" class="appearance-none bg-white/5 border border-white/10 text-white text-[8px] text-center font-black uppercase rounded-full px-4 py-2 pr-7 outline-none focus:border-[#ff0000] focus:ring-1 focus:ring-[#ff0000]">
+                    ${search ? `<option class="text-black" value="relevancia" ${currentSort==='relevancia'?'selected':''}>Relevancia</option>` : ''}
+                    <option class="text-black" value="default" ${currentSort==='default'?'selected':''}>Últimos Agregados</option>
+                    <option class="text-black" value="precio_menor" ${currentSort==='precio_menor'?'selected':''}>Precio: Menor a Mayor</option>
+                    <option class="text-black" value="precio_mayor" ${currentSort==='precio_mayor'?'selected':''}>Precio: Mayor a Menor</option>
+                    <option class="text-black" value="pres_mayor" ${currentSort==='pres_mayor'?'selected':''}>Presentación: Mayor</option>
+                    <option class="text-black" value="pres_menor" ${currentSort==='pres_menor'?'selected':''}>Presentación: Menor</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[14px] text-zinc-400 pointer-events-none">filter_list</span>
+            </div>
+        ` : '';
+        
+        const htmlString = Object.entries(grouped).map(([cat, products]) => {
+            const containerClass = isCarousel ? 'flex overflow-x-auto hide-scrollbar flex-nowrap overscroll-x-contain gap-4 px-1 pt-4 pb-4 scroll-smooth' : 'auto-grid px-1 pt-4 pb-4';
+            
+            let titleBtn = '';
+            let rightBtn = '';
+
+            if (search) {
+                titleBtn = `<button onclick="document.getElementById('global-search').value=''; onSearchInput(); clearTimeout(searchRenderTimer); render();" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-zinc-400 active:scale-90 ml-2 flex-shrink-0"><span class="material-symbols-outlined text-[16px]">close</span></button>`;
+            } else if (currentCat !== 'TODOS') {
+                titleBtn = `<button onclick="clearCategoryAndKeepScroll()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-zinc-400 active:scale-90 ml-2 flex-shrink-0"><span class="material-symbols-outlined text-[16px]">close</span></button>`;
+            } else if (isCarousel) {
+                rightBtn = `<button onclick="selectCategory('${cat}')" class="text-[10px] font-black text-zinc-300 uppercase bg-white/10 border border-white/20 px-4 py-2 rounded-full active:scale-95 flex-shrink-0 transition-colors ml-2">Ver Todo</button>`;
+            }
+            
+            return `<div class="mb-10"><div class="flex items-center justify-between mb-5 px-1"><div class="flex items-center gap-3 w-full"><div class="w-1.5 h-6 bg-primary rounded-full flex-shrink-0"></div><div class="flex items-center gap-0"><h2 class="text-xl font-black text-white uppercase tracking-tight truncate">${cat}</h2>${titleBtn}</div></div>${filterUI}${rightBtn}</div><div class="${containerClass}">${products.map(p => createCard(p, isCarousel)).join('')}</div></div>`;
+        }).join('');
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlString || '<div class="text-center text-zinc-500 py-10 font-bold uppercase tracking-widest text-xs">No se encontraron resultados</div>';
+        
+        const fragment = document.createDocumentFragment();
+        while(tempDiv.firstChild) {
+            fragment.appendChild(tempDiv.firstChild);
+        }
+        
+        const grid = document.getElementById('catalog-grid');
+        grid.innerHTML = ''; 
+        grid.appendChild(fragment); 
+    }
+    function appendCatalogItems() {
+        // 🔥 FILTRO ADMIN: Si es la cajera, bloqueamos también la paginación/scroll
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('DeliveryAdmin8382727282891')) return;
+    
+    
+    const search = document.getElementById('global-search').value.trim();
+    let items = search !== '' ? getAllSourceData() : getSourceData();
+    
+    if (currentCat === 'PROMOCIONES') {
+        const today = new Date();
+        const dayNames = ["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"];
+        const currentDay = dayNames[today.getDay()];
+        items = items.filter(p => {
+            if(p.promocion?.activa && p.promocion) {
+                const dateOk = p.promocion.hasta ? new Date(p.promocion.hasta) >= today : true;
+                const dayOk = p.promocion.dias?.includes(currentDay) || p.promocion.dias?.includes("Todos Los Dias");
+                return dateOk && dayOk;
+            }
+            return p.precio_promo && parseFloat(p.precio_promo) > 0;
+        });
+    } else if(currentCat !== 'TODOS' && search === '') { 
+        items = items.filter(p => p.categoria === currentCat); 
+    }
+    
+    if(search) {
+        const normalize = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const searchClean = normalize(search);
+       items = items.map(p => {
+                let score = getSearchScore(search, p.nombre);
+                
+                if (p.categoria && normalize(p.categoria) === searchClean) {
+                    score += 5000;
+                }
+                
+                // NUEVO: Verificamos si la búsqueda coincide exactamente con la columna de código de barras o con el ID
+                if (p.codigo_barras && p.codigo_barras.toString().trim() === search) {
+                    score += 10000; // Puntaje altísimo para que aparezca de primero e inmediato
+                }
+                if (p.id_producto && p.id_producto.toString().trim() === search) {
+                    score += 10000;
+                }
+                
+                return {
+                    ...p,
+                    _searchScore: score
+                };
+            }).filter(p => p._searchScore > 0);
+        
+        items.sort((a, b) => {
+            if (currentSort === 'relevancia' || currentSort === 'default') {
+                if (b._searchScore !== a._searchScore) return b._searchScore - a._searchScore;
+            }
+            if(currentSort === 'precio_mayor') return getProductPrice(b) - getProductPrice(a);
+            if(currentSort === 'precio_menor') return getProductPrice(a) - getProductPrice(b);
+            if(currentSort === 'pres_mayor') return extractUnitValue(b.nombre) - extractUnitValue(a.nombre);
+            if(currentSort === 'pres_menor') return extractUnitValue(a.nombre) - extractUnitValue(b.nombre);
+            return b._index - a._index;
+        });
+    } else {
+        if(currentSort === 'precio_mayor') items.sort((a, b) => getProductPrice(b) - getProductPrice(a));
+        else if(currentSort === 'precio_menor') items.sort((a, b) => getProductPrice(a) - getProductPrice(b));
+        else if(currentSort === 'pres_mayor') items.sort((a, b) => extractUnitValue(b.nombre) - extractUnitValue(a.nombre));
+        else if(currentSort === 'pres_menor') items.sort((a, b) => extractUnitValue(a.nombre) - extractUnitValue(b.nombre));
+        else items.sort((a, b) => b._index - a._index);
+    }
+    
+    // Obtenemos SOLO los nuevos elementos a inyectar
+    const newItems = items.slice(catalogLimit - 24, catalogLimit);
+    const htmlStr = newItems.map(p => createCard(p, false)).join('');
+    
+    // Inyectamos sin destruir el DOM existente
+    const gridContainer = document.querySelector('#catalog-grid .auto-grid');
+    if(gridContainer) {
+        gridContainer.insertAdjacentHTML('beforeend', htmlStr);
+    }
+}
+    
+    function triggerTap(el) {
+        if (!el) return;
+        el.classList.add('btn-bounce-active');
+        setTimeout(() => el.classList.remove('btn-bounce-active'), 150);
+    }
+
+    function createCard(p, isCarousel) {
+        const id = getUnifiedId(p);
+        const count = cart[id] || 0; 
+        const isOut = p.status === 'OUT_OF_STOCK';
+        const price = getProductPrice(p);
+        const isPromo = (p.promocion?.activa) || (p.precio_promo && parseFloat(p.precio_promo) > 0);
+        const priceDisplay = price === 0 ? 'SOLICITAR PRECIO' : '$' + price.toFixed(2);
+        
+        const cardClass = isCarousel ? 'carousel-card' : 'w-full';
+        const contourClass = isPromo ? 'card-promo' : '';
+        const pricePillAnimationClass = '';
+        
+        const img = p.imagen || DEFAULT_IMG;
+        
+        return `<div class="product-card-glass glass-contour ${isOut ? 'out-of-stock' : ''} ${cardClass} ${contourClass}" id="card-${id}" data-id="${id}" onclick="openProductView('${id}')" style="background: rgba(15,15,18,0.8); transition: background 0.4s ease;">
+            <div class="glass-overlay">
+                <div class="w-full aspect-square rounded-2xl overflow-hidden mb-2 relative flex items-center justify-center image-container flex-shrink-0">
+                    ${isPromo ? '<div class="absolute top-2 left-2 z-30 bg-black/60 backdrop-blur-md border border-white/10 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg tracking-widest flex items-center gap-1">🔥 PROMO!</div>' : ''}
+                    <img class="main-image" src="${img}" crossorigin="anonymous" decoding="async" onload="this.classList.add('loaded'); extractLeftColor(this, 'card-${id}');" onerror="this.classList.add('loaded')" loading="lazy" oncontextmenu="return false;" draggable="false"/>
+                    <img class="placeholder-blur" src="${img}" aria-hidden="true" decoding="async"/>
+                </div>
+                
+                <h3 class="card-title text-white uppercase text-center w-full font-black leading-tight">${sanitizeHTML(p.nombre)}</h3>
+                <p class="text-[8px] text-zinc-400/80 font-bold uppercase tracking-widest mb-1 text-center mt-auto">Toca para ver más</p>
+                
+                <div class="flex justify-center w-full pt-1 relative btn-action-area btn-bounce" onclick="event.stopPropagation(); add('${id}')">
+                    ${count > 0 ? `<div class="count-badge">${count}</div>` : ''} 
+                    <button class="price-pill w-full py-2.5 rounded-full text-[11px] md:text-xs font-bold flex items-center justify-center gap-1 ${count > 0 ? 'active' : ''}" ${isOut ? 'disabled' : ''}>
+                        ${isOut ? 'SIN STOCK' : priceDisplay}
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }
+    function renderCart() {
+        const list = document.getElementById('cart-items-list');
+        const items = Object.keys(cart).map(id => { const p = getAllSourceData().find(x => getUnifiedId(x) === id); return p ? {...p, qty: cart[id]} : null; }).filter(p => p && p.qty > 0);
+        
+        if(!items.length) { list.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-zinc-600"><span class="material-symbols-outlined text-6xl mb-4">shopping_basket</span><p class="font-black uppercase tracking-widest text-[10px]">Carrito vacío</p></div>`; return; }
+        
+        list.innerHTML = items.map(p => { 
+            const id = getUnifiedId(p); const price = getProductPrice(p); 
+const priceDisplay = price === 0 ? '<span class="text-xs text-zinc-400">SOLICITAR PRECIO</span>' : `$${price.toFixed(2)} <span class="text-[10px] text-primary font-bold ml-1">C/u</span>`;
+const img = p.imagen || DEFAULT_IMG;
+const bgCache = colorCache.has('card-' + id) ? colorCache.get('card-' + id) : 'rgba(255,255,255,0.05)';
+
+// ... dentro del map de renderCart
+return `<div class="cart-item-container relative overflow-hidden flex items-center justify-between p-3 rounded-3xl border border-white/10 gap-2 cursor-pointer active:scale-[0.98] isolation-isolate" id="cart-item-${id}" onclick="openProductView('${id}')">
+    
+    <div class="cart-bg-layer absolute inset-0 z-0 rounded-3xl" style="background: ${bgCache};"></div>
+    <div class="absolute inset-0 z-0 bg-black/50 pointer-events-none rounded-3xl"></div>
+    
+    <div class="relative z-10 flex items-center gap-3 flex-1 min-w-0">
+        <div class="w-[72px] h-[72px] rounded-2xl overflow-hidden bg-black/20 flex-shrink-0 shadow-lg">
+           <img src="${img}" crossorigin="anonymous" onload="extractLeftColor(this, 'card-${id}')" class="w-full h-full object-cover" oncontextmenu="return false;" draggable="false">
+        </div>
+        <div class="flex flex-col min-w-0 flex-1 pr-1">
+            <span class="text-sm md:text-base font-[800] text-white uppercase leading-tight line-clamp-2 w-full">${sanitizeHTML(p.nombre)}</span>
+            <span class="text-sm md:text-base text-primary font-black tracking-wider mt-1">${priceDisplay}</span>
+        </div>
+    </div>
+    
+    <div class="relative z-10 flex items-center justify-between bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10 flex-shrink-0 shadow-lg" onclick="event.stopPropagation();">
+        <button onclick="changeQty('${id}', -1)" class="w-7 h-7 rounded-full flex items-center justify-center text-white active:scale-90">
+            <span class="material-symbols-outlined text-[16px]">remove</span>
+        </button>
+        <span class="w-5 text-center text-[11px] font-black text-white">${p.qty}</span>
+        <button onclick="changeQty('${id}', 1)" class="w-7 h-7 rounded-full flex items-center justify-center text-white active:scale-90">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+        </button>
+    </div>
+</div>`;
+        }).join('');
+    }
+
+    // ACCIÓN ASÍNCRONA DE CARRITO (Máxima fluidez)
+    function changeQty(id, delta) {
+        playClick();
+        if(window.navigator.vibrate) window.navigator.vibrate(5); 
+
+        requestAnimationFrame(() => {
+            const newQty = Math.max(0, (cart[id] || 0) + delta);
+            if(newQty === 0) delete cart[id];
+            else cart[id] = newQty;
+            
+            const cartModalActive = document.getElementById('cart-modal').classList.contains('active');
+                    if(cartModalActive) {
+                        if(newQty === 0) {
+                            renderCart();
+                        } else {
+                            const qtyEl = document.querySelector(`#cart-item-${id} .w-5`);
+                            if(qtyEl) qtyEl.innerText = newQty;
+                        }
+                    }
+            
+            updateOrder();
+            syncCardBadge(id); 
+            saveCart(); 
+        });
+    }
+
+    // ACCIÓN ASÍNCRONA DE BOTÓN AGREGAR (Máxima fluidez)
+    function add(id) { 
+        triggerTap(document.querySelector(`[data-id="${id}"] .btn-action-area`));
+        playClick();
+        if(window.navigator.vibrate) window.navigator.vibrate(8); 
+
+        setTimeout(() => {
+            cart[id] = (cart[id] || 0) + 1; 
+            updateOrder(); 
+            syncCardBadge(id); 
+            saveCart(); 
+            
+            const cartActive = document.getElementById('cart-modal').classList.contains('active'); 
+            if(cartActive) renderCart(); 
+        }, 0);
+    }
+
+    function syncCardBadge(id) {
+        const count = cart[id] || 0;
+        document.querySelectorAll(`[data-id="${id}"]`).forEach(card => {
+            const badge = card.querySelector('.count-badge');
+            const pill = card.querySelector('.price-pill');
+            
+            if(count > 0) { 
+                if(badge) badge.innerText = count; 
+                else { 
+                    const area = card.querySelector('.btn-action-area'); 
+                    if(area) area.insertAdjacentHTML('afterbegin', `<div class="count-badge">${count}</div>`); 
+                } 
+                if(pill) pill.classList.add('active'); 
+            }
+            else { 
+                if(badge) badge.remove(); 
+                if(pill) pill.classList.remove('active'); 
+            }
+        });
+    }
+
+    function clearCart() { 
+        customConfirm('¿Seguro que deseas vaciar todo el pedido?', () => {
+            cart = {}; 
+            updateOrder(); 
+            document.querySelectorAll('.count-badge').forEach(b => b.remove()); 
+            document.querySelectorAll('.price-pill').forEach(p => p.classList.remove('active')); 
+            saveCart(); 
+            renderCart(); 
+            toggleModal('cart-modal', false); 
+        }, 'Vaciar Pedido');
+    }
+    
+    function updateOrder() {
+        let total = 0, count = 0;
+        const all = getAllSourceData();
+        Object.keys(cart).forEach(id => { const p = all.find(x => getUnifiedId(x) === id); if(p) { const price = getProductPrice(p); total += price * cart[id]; count += cart[id]; } });
+        
+        document.getElementById('order-total').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('cart-subtotal').innerText = `$${total.toFixed(2)}`;
+        
+        const subtotalBsEl = document.getElementById('cart-subtotal-bs');
+        if(subtotalBsEl) {
+            const totalBs = total * tasaBCV;
+            subtotalBsEl.innerText = `Bs ${totalBs.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+        
+        const island = document.getElementById('order-island');
+        if(count > 0) {
+            island.classList.remove('order-island-hidden');
+            document.body.classList.add('island-active');
+        } else {
+            island.classList.add('order-island-hidden');
+            document.body.classList.remove('island-active');
+        }
+    }
+    
+    function setType(type, btn) { 
+        if (currentType === type) return;
+        
+        document.querySelectorAll('.type-tab').forEach(b => { b.classList.remove('type-tab-active'); b.classList.add('type-tab-inactive'); }); 
+        btn.classList.add('type-tab-active'); 
+        btn.classList.remove('type-tab-inactive'); 
+        
+        const menuBtn = document.getElementById('cat-menu-btn');
+        if(menuBtn) {
+            menuBtn.classList.add('bg-white/10', 'border-white/20');
+            menuBtn.classList.remove('bg-primary', 'border-primary');
+        }
+
+        currentType = type; 
+        currentCat = 'TODOS'; 
+        catalogLimit = 24; 
+
+        const searchInput = document.getElementById('global-search');
+        if (searchInput) searchInput.value = ''; 
+        const searchIcon = document.getElementById('search-icon');
+        if(searchIcon) {
+            searchIcon.innerText = 'search';
+            searchIcon.classList.remove('text-primary');
+        }
+        
+        const tabsContainer = document.getElementById('type-tabs-container');
+        tabsContainer.classList.remove('tabs-hidden');
+        
+        showSkeletons();
+        
+        setTimeout(() => {
+            renderCatalog();
+            scrollToCatalog();
+        }, 150); 
+    }
+    
+    function setCat(c) { 
+        currentCat = c; 
+        catalogLimit = 24; // Optimización vital: Rinde primero 24
+        
+        const menuBtn = document.getElementById('cat-menu-btn');
+        if (c !== 'TODOS') {
+            menuBtn.classList.remove('bg-white/10', 'border-white/20');
+            menuBtn.classList.add('bg-primary', 'border-primary');
+        } else {
+            menuBtn.classList.add('bg-white/10', 'border-white/20');
+            menuBtn.classList.remove('bg-primary', 'border-primary');
+        }
+        
+        const searchInput = document.getElementById('global-search');
+        if(searchInput) searchInput.value = ''; 
+        const searchIcon = document.getElementById('search-icon');
+        if(searchIcon) {
+            searchIcon.innerText = 'search';
+            searchIcon.classList.remove('text-primary');
+        }
+        
+        window.requestAnimationFrame(() => {
+            render(); 
+            window.requestAnimationFrame(() => {
+                scrollToCatalog();
+            });
+        });
+    }
+
+    function shareProduct(id, name) {
+    const url = window.location.origin + window.location.pathname + '?id=' + id;
+    
+    // Abre el nuevo modal en lugar de compartir directo
+    openShareModal(url, 'Producto Combox');
+}
+    
+    function shareSugerencias() {
+        const url = window.location.origin + window.location.pathname + '?sugerencias=true';
+        
+        // Abre el nuevo modal en lugar de compartir directo
+        openShareModal(url, 'Buzón de Sugerencias');
+    }
+    
+   function openProductView(id) {
+    requestAnimationFrame(() => {
+        const p = getAllSourceData().find(x => getUnifiedId(x) === id);
+        if (!p) return;
+
+        const price = getProductPrice(p);
+        const isOut = p.status === 'OUT_OF_STOCK';
+        const img = p.imagen || DEFAULT_IMG;
+        const safeName = p.nombre.replace(/'/g, "\\'");
+        const priceDisplay = price === 0 ? 'Por cotizar' : '$' + price.toFixed(2);
+        const bgCache = colorCache.has('card-' + id) ? colorCache.get('card-' + id) : 'rgba(35,35,40,0.9)';
+
+        const modalContent = document.getElementById('product-content');
+
+        // --- CORRECCIÓN DEFINITIVA DE BORDES ---
+        modalContent.style.borderRadius = '32px';
+        modalContent.style.overflow = 'hidden';
+        modalContent.style.border = '2px solid #52525b'; // Borde gris sólido
+        modalContent.style.backgroundColor = '#0A0A0B'; // Fondo base oscuro
+        
+        modalContent.innerHTML = `
+            <div id="modal-bg-color" class="absolute z-0 transition-colors duration-500 rounded-[28px]" style="background: ${bgCache}; inset: 2px;"></div>
+            
+            <div class="absolute bottom-0 inset-x-0 h-[60%] z-20 pointer-events-none bg-gradient-to-t from-[#0A0A0B] to-transparent"></div>
+            
+            <div class="absolute top-4 right-4 z-50 flex items-center gap-2">
+                <button type="button" class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-transform" onclick="shareProduct('${id}', '${safeName}')">
+                    <span class="material-symbols-outlined text-[18px]">ios_share</span>
+                </button>
+                <button type="button" class="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-transform" onclick="toggleModal('product-modal', false)">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+            
+            <div class="relative z-30 w-full flex-shrink-0 flex items-center justify-center mt-20 mb-4 px-8" style="height: 35vh;">
+                <div class="relative w-full max-w-[280px] aspect-square rounded-3xl overflow-hidden shadow-2xl bg-black/20 border border-white/20 glass-contour" style="box-shadow: inset 0 0 20px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.6); background: url('${img}') center/cover no-repeat;">
+                    <div class="absolute top-3 left-4 z-[100] pointer-events-none opacity-40">
+                        <span class="font-[900] text-white text-[8px] tracking-widest drop-shadow-md">COMBOX</span>
+                    </div>
+                    <img src="${img}" onload="applyModalColor(this, '${id}'); this.style.opacity='1';" class="w-full h-full object-cover pointer-events-none select-none rounded-3xl opacity-0 transition-opacity duration-100" draggable="false" oncontextmenu="return false;" decoding="sync"/>
+                </div>
+            </div>
+            
+            <div class="relative z-40 p-6 md:p-8 flex flex-col flex-1 overflow-y-auto hide-scrollbar">
+                <h2 class="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter leading-tight mb-2 drop-shadow-md">${sanitizeHTML(p.nombre)}</h2>
+                <p class="text-sm text-zinc-300 leading-relaxed overflow-y-auto hide-scrollbar mb-6 drop-shadow-md">${sanitizeHTML(p.descripcion || 'Sin descripción.')}</p>
+                <div class="mt-auto pt-4 border-t border-white/20 flex items-center justify-between">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-0.5">Precio</span>
+                        <span class="text-3xl font-black text-white tracking-tighter leading-none drop-shadow-lg">${priceDisplay}</span>
+                    </div>
+                    <button type="button" onclick="add('${id}'); toggleModal('product-modal', false);" ${isOut ? 'disabled' : ''} class="bg-primary text-white font-black px-8 py-3.5 rounded-full text-xs uppercase shadow-lg shadow-primary/40 active:scale-95 tracking-widest ${isOut ? 'opacity-50 grayscale' : ''}">
+                        ${isOut ? 'Agotado' : 'Agregar'}
+                    </button>
+                </div>
+            </div>`;
+
+        toggleProductModal(true);
+    }, 15);
+}
+    
+   let marcadoresPickupMap = []; // Añadimos esto para controlar los pines y no sobrecargar el mapa
+
+function renderPickupMap() {
+    if(!pickupMap) {
+        const customRenderer = L.svg({ padding: 1.5 });
+        pickupMap = L.map('checkout-pickup-map', { zoomControl: false, attributionControl: false, renderer: customRenderer }).setView([10.2543, -68.0101], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(pickupMap);
+        
+        // Polígonos GeoJSON
+        if (typeof misZonasGeoJSON !== 'undefined') {
+            L.geoJSON(misZonasGeoJSON, {
+                style: (f) => ({ color: f.properties.fill || "#E30613", weight: 2, fillColor: f.properties.fill || "#E30613", fillOpacity: 0.15 }),
+                interactive: false 
+            }).addTo(pickupMap);
+        }
+    }
+
+    // Limpiamos los pines viejos con la nueva variable antes de poner los nuevos
+    if (marcadoresPickupMap && marcadoresPickupMap.length > 0) {
+        marcadoresPickupMap.forEach(m => pickupMap.removeLayer(m));
+    }
+    marcadoresPickupMap = [];
+
+    let bounds = [];
+    db.sedes.forEach(s => {
+        const [lat, lng] = s.COORDENADAS_SEDE.split(',').map(Number);
+        bounds.push([lat, lng]);
+        const isSelected = checkoutSede && checkoutSede.ID_SEDE === s.ID_SEDE;
+        const sched = getSchedule(s);
+        
+        const dotColor = sched.isOpen ? '#39FF14' : '#ff0000';
+        const dotShadow = sched.isOpen ? 'rgba(57,255,20,0.8)' : 'rgba(255,0,0,0.8)';
+        
+        let iconWrapperClass = sched.isOpen ? "" : "grayscale opacity-60";
+        let letreroClass = sched.isOpen ? "" : "opacity-60";
+        let isClosest = (sedeMasCercanaCalculada && sedeMasCercanaCalculada.ID_SEDE === s.ID_SEDE);
+        let badgeCerca = isClosest ? `<div class="absolute -top-5 bg-blue-500 text-white text-[9px] font-black px-2 py-0.5 rounded border border-blue-300 uppercase shadow-[0_0_10px_rgba(59,130,246,0.8)] whitespace-nowrap z-50 animate-bounce">¡MÁS CERCA!</div>` : '';
+
+        if (!isSelected) {
+            if (sched.isOpen) {
+                iconWrapperClass = "scale-[0.85] brightness-75 opacity-95"; 
+                letreroClass = "opacity-80 scale-[0.95]";
+            } else {
+                iconWrapperClass = "scale-[0.85] grayscale opacity-60 brightness-75"; 
+                letreroClass = "opacity-60 scale-[0.95]";
+            }
+        }
+        
+        const iconHtml = `
+            <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative ${isSelected ? 'selected-sede z-[500]' : 'z-[400]'}" onclick="event.stopPropagation(); updateCheckoutSede('${s.ID_SEDE}')">
+                ${badgeCerca}
+                <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${iconWrapperClass}">
+                    <span class="material-symbols-outlined text-white" style="font-size: 22px; font-variation-settings: 'FILL' 1;">storefront</span>
+                </div>
+                <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${letreroClass}">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotShadow};"></span>
+                        <span class="text-[9px] font-black text-white uppercase leading-none tracking-widest">COMBOX</span>
+                    </div>
+                    <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 truncate max-w-[80px] text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+                </div>
+            </div>`;
+        const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+        
+        let marker = L.marker([lat, lng], { icon }).addTo(pickupMap);
+        marcadoresPickupMap.push(marker); // Guardamos el pin
+    });
+    
+    // Ubicación actual del usuario (Punto Verde)
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            let userMarker = L.marker([pos.coords.latitude, pos.coords.longitude], { icon: greenDotIcon }).addTo(pickupMap);
+            marcadoresPickupMap.push(userMarker);
+            bounds.push([pos.coords.latitude, pos.coords.longitude]);
+            pickupMap.flyToBounds(bounds, { padding: [30, 30], duration: 0.6 }); // flyToBounds asegura el movimiento fluido
+        });
+    } else if(bounds.length > 0) {
+        pickupMap.flyToBounds(bounds, { padding: [30, 30], duration: 0.6 });
+    }
+    
+    setTimeout(() => {
+        pickupMap.invalidateSize();
+        updateMarkerScales(pickupMap);
+    }, 100);
+}
+
+// =========================================================
+// --- INICIO LÓGICA VISTA ADMIN CAJERA DELIVERY (PRO) ---
+// =========================================================
+let isAdminDelivery = false;
+let adminPendingLatLng = null;
+
+// 1. MOTOR DE SINCRONIZACIÓN (Usa .textContent para leer de capas ocultas)
+setInterval(() => {
+    if (isAdminDelivery) {
+        const kmElem = document.getElementById('route-km');
+        const timeElem = document.getElementById('route-time');
+        const precioElem = document.getElementById('map-header-title');
+        
+        const cajeraKm = document.getElementById('cajera-km');
+        const cajeraTiempo = document.getElementById('cajera-tiempo');
+        const cajeraTarifa = document.getElementById('cajera-tarifa');
+        
+        if (kmElem && cajeraKm) {
+            const val = kmElem.textContent.trim();
+            cajeraKm.innerText = val ? val : "--";
+        }
+        if (timeElem && cajeraTiempo) {
+            const val = timeElem.textContent.trim();
+            cajeraTiempo.innerText = val ? val : "--";
+        }
+        if (precioElem && cajeraTarifa) {
+            const val = precioElem.textContent.trim();
+            if (val.includes("CALCULANDO")) {
+                cajeraTarifa.innerText = "Calculando...";
+            } else {
+                cajeraTarifa.innerText = val ? val : "--";
+            }
+        }
+    }
+}, 150);
+
+// 2. FUNCIÓN PARA REDIBUJAR SEDES CUANDO NO HAY COORDENADAS DE CLIENTE
+window.dibujarSedesEnMapa = function() {
+    if (!map || !db || !db.sedes) return;
+    
+    if (typeof marcadoresSedesMap !== 'undefined' && marcadoresSedesMap) {
+        marcadoresSedesMap.forEach(m => { try { map.removeLayer(m); } catch(e){} });
+    }
+    marcadoresSedesMap = [];
+
+    db.sedes.forEach(s => {
+        const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+        const isSelected = checkoutSede && (String(s.ID_SEDE) === String(checkoutSede.ID_SEDE));
+        const sched = typeof getSchedule === 'function' ? getSchedule(s) : { isOpen: true };
+        
+        const dotColor = sched.isOpen ? '#39FF14' : '#ff0000';
+        const dotShadow = sched.isOpen ? 'rgba(57,255,20,0.8)' : 'rgba(255,0,0,0.8)';
+        
+        let iconWrapperClass = "";
+        let letreroClass = "";
+        
+        let isClosest = (typeof sedeMasCercanaCalculada !== 'undefined' && sedeMasCercanaCalculada && String(sedeMasCercanaCalculada.ID_SEDE) === String(s.ID_SEDE));
+        let badgeCerca = isClosest ? `<div class="absolute -top-5 bg-blue-500 text-white text-[9px] font-black px-2 py-0.5 rounded border border-blue-300 uppercase shadow-[0_0_10px_rgba(59,130,246,0.8)] whitespace-nowrap z-50 animate-bounce">¡MÁS CERCA!</div>` : '';
+
+        if (!isSelected) {
+            if (sched.isOpen) {
+                iconWrapperClass = "scale-[0.85] brightness-75 opacity-95"; 
+                letreroClass = "opacity-80 scale-[0.95]";
+            } else {
+                iconWrapperClass = "scale-[0.85] grayscale opacity-60 brightness-75"; 
+                letreroClass = "opacity-60 scale-[0.95]";
+            }
+        }
+
+        const iconHtml = `
+            <div class="sede-marker-content flex flex-col items-center justify-center cursor-pointer relative ${isSelected ? 'selected-sede z-[500]' : 'z-[400]'}" onclick="event.stopPropagation(); updateCheckoutSede('${s.ID_SEDE}')">
+                ${badgeCerca}
+                <div class="w-10 h-10 rounded-full border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.9)] bg-black/60 flex items-center justify-center mb-1 ${iconWrapperClass}">
+                    <span class="material-symbols-outlined text-white" style="font-size: 22px; font-variation-settings: 'FILL' 1;">storefront</span>
+                </div>
+                <div class="bg-black/40 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-xl flex flex-col items-center shadow-lg ${letreroClass}">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotShadow};"></span>
+                        <span class="text-[9px] font-black text-white uppercase leading-none tracking-widest">COMBOX</span>
+                    </div>
+                    <span class="text-[7.5px] font-bold text-zinc-300 uppercase leading-none mt-1 truncate max-w-[80px] text-center">${s.NOMBRE_SEDE.split(',')[0]}</span>
+                </div>
+            </div>`;
+            
+        const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [90, 90], iconAnchor:[45, 45] });
+        marcadoresSedesMap.push(L.marker([sLat, sLng], { icon }).addTo(map));
+    });
+
+    if (typeof updateMarkerScales === "function") updateMarkerScales(map);
+};
+
+// 3. RECÁLCULO AL CAMBIAR DE SEDE (Selector o Clic en Mapa)
+window.cambiarSedeAdmin = async function(id) {
+    if(db && db.sedes) {
+        checkoutSede = db.sedes.find(s => String(s.ID_SEDE) === String(id)) || checkoutSede;
+        
+        const selectSedeAdmin = document.getElementById('cajera-sede');
+        if(selectSedeAdmin) selectSedeAdmin.value = checkoutSede.ID_SEDE;
+
+        const coords = document.getElementById('cajera-coords').value;
+        if(coords) {
+            const [lat, lng] = coords.split(',').map(Number);
+            if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = "CALCULANDO...";
+            
+            isManualLocation = true;
+            await renderMapPosition(lat, lng, true); 
+        } else {
+            if (checkoutSede && checkoutSede.COORDENADAS_SEDE && map) {
+                const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+                map.setView([sLat, sLng], 13);
+                
+                if (typeof userMarker !== 'undefined' && userMarker) { try { map.removeLayer(userMarker); } catch(e){} userMarker = null; }
+                if (typeof rutaLayer !== 'undefined' && rutaLayer) { try { map.removeLayer(rutaLayer); } catch(e){} rutaLayer = null; }
+                
+                document.getElementById('cajera-tarifa').innerText = "--";
+                document.getElementById('cajera-tiempo').innerText = "--";
+                document.getElementById('cajera-km').innerText = "--";
+                
+                window.dibujarSedesEnMapa();
+            }
+        }
+    }
+};
+
+// 4. ACTIVAR EL MODO PIN MANUAL (Usa ÚNICAMENTE tu pin 'redPinIcon')
+window.activarPinAdmin = function() {
+    if(!map) return;
+    isEditingLocation = true;
+    isManualLocation = true; 
+    
+    document.getElementById('admin-pin-controls').style.display = 'flex';
+    
+    if (typeof rutaLayer !== 'undefined' && rutaLayer) { 
+        try { map.removeLayer(rutaLayer); } catch(e){}
+        rutaLayer = null; 
+    }
+    
+    map.off('move', window.adminMapMoveEvent);
+    map.off('moveend', window.adminMapMoveEndEvent);
+
+    const center = map.getCenter();
+    
+    if (typeof userMarker !== 'undefined' && userMarker !== null) {
+        userMarker.setIcon(redPinIcon);
+        userMarker.setLatLng(center);
+    } else {
+        userMarker = L.marker(center, {icon: redPinIcon}).addTo(map);
+    }
+    
+    adminPendingLatLng = center;
+
+    window.adminMapMoveEvent = function() {
+        if(isEditingLocation && typeof userMarker !== 'undefined' && userMarker) {
+            userMarker.setLatLng(map.getCenter());
+        }
+    };
+    window.adminMapMoveEndEvent = function() {
+        if(isEditingLocation) adminPendingLatLng = map.getCenter();
+    };
+
+    map.on('move', window.adminMapMoveEvent);
+    map.on('moveend', window.adminMapMoveEndEvent);
+};
+
+// 5. ACEPTAR POSICIÓN DEL PIN MANUAL (Auto-selección inteligente Abiertas vs Cerradas)
+window.aceptarPinAdmin = async function(manualLat = null, manualLng = null) {
+    window.isEditingLocation = false;
+    isManualLocation = true; 
+    document.getElementById('admin-pin-controls').style.display = 'none';
+    
+    map.off('move', window.adminMapMoveEvent);
+    map.off('moveend', window.adminMapMoveEndEvent);
+    
+    const lat = manualLat || (adminPendingLatLng ? adminPendingLatLng.lat : null);
+    const lng = manualLng || (adminPendingLatLng ? adminPendingLatLng.lng : null);
+    
+    if(!lat || !lng) return;
+    
+    document.getElementById('cajera-coords').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = "CALCULANDO...";
+    
+    // FILTRO DINÁMICO: Evaluamos la sede ideal según disponibilidad y cercanía absoluta
+    if (db && db.sedes) {
+        let distMinimaAbierta = Infinity;
+        let sedeAbiertaMasCercana = null;
+        
+        let distMinimaCerrada = Infinity;
+        let sedeCerradaMasCercana = null;
+
+        db.sedes.forEach(s => {
+            const [sLat, sLng] = s.COORDENADAS_SEDE.split(',').map(Number);
+            const dist = typeof calcularDistanciaHaversine === 'function' ? calcularDistanciaHaversine(lat, lng, sLat, sLng) : Infinity;
+            const sched = typeof getSchedule === 'function' ? getSchedule(s) : { isOpen: true };
+
+            if (sched.isOpen) {
+                if (dist < distMinimaAbierta) {
+                    distMinimaAbierta = dist;
+                    sedeAbiertaMasCercana = s;
+                }
+            } else {
+                if (dist < distMinimaCerrada) {
+                    distMinimaCerrada = dist;
+                    sedeCerradaMasCercana = s;
+                }
+            }
+        });
+
+        // Selección: Sede abierta más cercana; si no hay abiertas, la cerrada más cercana
+        let mejorSede = sedeAbiertaMasCercana || sedeCerradaMasCercana;
+        if (mejorSede) {
+            checkoutSede = mejorSede;
+            const selectSedeAdmin = document.getElementById('cajera-sede');
+            if(selectSedeAdmin) selectSedeAdmin.value = checkoutSede.ID_SEDE;
+            document.querySelectorAll('.checkout-sede-select').forEach(sel => sel.value = checkoutSede.ID_SEDE);
+        }
+    }
+    
+    await renderMapPosition(lat, lng, true);
+    await obtenerZonaORS(lat, lng);
+};
+
+// 6. CANCELAR MODIFICACIÓN DEL PIN
+window.cancelarPinAdmin = async function() {
+    window.isEditingLocation = false;
+    isManualLocation = true;
+    document.getElementById('admin-pin-controls').style.display = 'none';
+    
+    map.off('move', window.adminMapMoveEvent);
+    map.off('moveend', window.adminMapMoveEndEvent);
+    
+    const coords = document.getElementById('cajera-coords').value;
+    if(coords) {
+        const [lat, lng] = coords.split(',').map(Number);
+        await renderMapPosition(lat, lng, true);
+    } else {
+        if (typeof userMarker !== 'undefined' && userMarker) { try { map.removeLayer(userMarker); } catch(e){} userMarker = null; }
+        if (typeof rutaLayer !== 'undefined' && rutaLayer) { try { map.removeLayer(rutaLayer); } catch(e){} rutaLayer = null; }
+        window.dibujarSedesEnMapa();
+    }
+};
+// 6.5 LEER COORDENADAS PEGADAS MANUALMENTE EN EL INPUT DE CAJERA
+window.actualizarCoordenadasManualAdmin = async function(val) {
+    // Si presiona Enter pero está vacío, no hace nada
+    if(!val || val.trim() === '') return; 
+
+    const coincidencia = val.match(/[(]?\s*(-?\d+\.\d+)\s*[,;\s]+\s*(-?\d+\.\d+)\s*[)]?/);
+    
+    if(coincidencia) {
+        const lat = parseFloat(coincidencia[1]);
+        const lng = parseFloat(coincidencia[2]);
+        
+        // Quitamos el foco (cierra el teclado)
+        document.getElementById('cajera-coords').blur(); 
+        
+        // Mandamos a calcular
+        await window.aceptarPinAdmin(lat, lng); 
+    } else {
+        // Le avisamos si el formato es inválido para que no se quede esperando
+        alert("Formato de coordenadas inválido. Asegúrate de incluir Latitud y Longitud.");
+    }
+};
+// 7. GEOCODIFICACIÓN DE LA ZONA (Actualizado con doble respaldo para Admin)
+window.obtenerZonaORS = async function(lat, lng) {
+    const inputZona = document.getElementById('cajera-zona');
+    if (inputZona) inputZona.value = "Buscando...";
+
+    // --- INTENTO 1: Nominatim ---
+    try {
+        const urlNominatim = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+        const resNom = await fetch(urlNominatim, { signal: AbortSignal.timeout(4000) });
+        if (resNom.ok) {
+            const data = await resNom.json();
+            if (data && data.address) {
+                const addr = data.address;
+                let partes = [];
+                if (addr.road) partes.push(addr.road);
+                else if (addr.neighbourhood) partes.push(addr.neighbourhood);
+                
+                const ciudad = addr.city || addr.town || addr.village || addr.municipality;
+                if (ciudad) partes.push(ciudad);
+                
+                if (partes.length > 0) {
+                    if (inputZona) inputZona.value = partes.join(', ');
+                    return; 
+                }
+            }
+        }
+    } catch(e) {}
+
+    // --- INTENTO 2: OpenRouteService ---
+    try {
+        const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImZmY2VkMzZhOTM4YjQ1MTliZjg4Y2M3ZTk3N2E5ZmQ4IiwiaCI6Im11cm11cjY0In0='; 
+        const urlORS = `https://api.openrouteservice.org/geocode/reverse?api_key=${orsApiKey}&point.lon=${lng}&point.lat=${lat}`;
+        const resORS = await fetch(urlORS, { signal: AbortSignal.timeout(4000) });
+        if (resORS.ok) {
+            const data = await resORS.json();
+            if (data.features && data.features.length > 0) {
+                const props = data.features[0].properties;
+                let partes = [];
+                if (props.street) partes.push(props.street);
+                if (props.locality) partes.push(props.locality);
+                else if (props.county) partes.push(props.county);
+                
+                if (inputZona) inputZona.value = partes.length > 0 ? partes.join(', ') : (props.name || "Zona Desconocida");
+                return; 
+            }
+        }
+    } catch(e) {}
+
+    // --- INTENTO 3: Fallo general ---
+    if (inputZona) inputZona.value = "Ubicación fijada";
+};
+// =========================================================
+// --- FUNCIÓN: TOGGLE RUTA ALTERNATIVA (CON CACHÉ) ---
+// =========================================================
+
+// Variables globales para recordar el estado y el caché
+window.estadoRutaAlterna = false;
+window.cacheRutaAlterna = null;
+window.coordenadasRutaActual = "";
+
+window.calcularRutaAlternativaAdmin = async function() {
+    const coords = document.getElementById('cajera-coords').value;
+    if (!coords || !checkoutSede) {
+        alert("Por favor, fija una ubicación en el mapa primero.");
+        return;
+    }
+
+    const [lat, lng] = coords.split(',').map(Number);
+    // Creamos una llave única con las coordenadas actuales para saber si el pin se movió
+    const coordsKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    
+    // Si el pin se movió a otro lado, reseteamos nuestro caché de la ruta alternativa
+    if (window.coordenadasRutaActual !== coordsKey) {
+        window.estadoRutaAlterna = false;
+        window.cacheRutaAlterna = null;
+        window.coordenadasRutaActual = coordsKey;
+    }
+
+    const btn = document.querySelector('button[onclick="calcularRutaAlternativaAdmin()"]');
+
+    if (window.estadoRutaAlterna) {
+        // ==========================================
+        // VOLVER A LA RUTA ORIGINAL (Verde)
+        // ==========================================
+        document.getElementById('cajera-tarifa').innerText = "Restaurando...";
+        if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = "CALCULANDO...";
+
+        // Leemos la ruta original que tu app ya guarda en localStorage por defecto
+        const cacheKeyOriginal = `ruta_unificada_${checkoutSede.ID_SEDE}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+        const cachedOriginalStr = localStorage.getItem(cacheKeyOriginal);
+        
+        let routeInfoOriginal = null;
+        if (cachedOriginalStr) {
+            routeInfoOriginal = JSON.parse(cachedOriginalStr).data;
+        }
+
+        if (routeInfoOriginal) {
+            renderizarRutaCalculada(routeInfoOriginal, '#39FF14'); // Dibujamos en verde
+            window.estadoRutaAlterna = false;
+            if(btn) {
+                btn.innerText = "Ruta Alterna";
+                btn.classList.replace('bg-[#39ff14]', 'bg-[#FF8C00]'); // Volvemos el botón naranja
+                btn.classList.replace('text-black', 'text-white');
+            }
+        } else {
+            // Si por alguna razón extraña se borró el caché original, forzamos recálculo nativo
+            window.estadoRutaAlterna = false;
+            if(btn) btn.innerText = "Ruta Alterna";
+            await renderMapPosition(lat, lng, true);
+        }
+        return;
+    }
+
+    // ==========================================
+    // MOSTRAR RUTA ALTERNATIVA (Naranja)
+    // ==========================================
+    document.getElementById('cajera-tarifa').innerText = "Calculando...";
+    if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = "R. ALTERNA...";
+
+    let routeInfoAlt = window.cacheRutaAlterna;
+
+    // Si NO tenemos la alternativa en caché, consultamos las APIs
+    if (!routeInfoAlt) {
+        const [sedeLat, sedeLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+        const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImZmY2VkMzZhOTM4YjQ1MTliZjg4Y2M3ZTk3N2E5ZmQ4IiwiaCI6Im11cm11cjY0In0=';
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sedeLng},${sedeLat};${lng},${lat}?overview=full&geometries=geojson&alternatives=true`;
+
+        try {
+            const resOsrm = await fetch(osrmUrl);
+            if (!resOsrm.ok) throw new Error("OSRM Caído");
+            const dataOsrm = await resOsrm.json();
+
+            if (dataOsrm.code === 'Ok' && dataOsrm.routes && dataOsrm.routes.length > 0) {
+                const routeAlt = dataOsrm.routes.length > 1 ? dataOsrm.routes[1] : dataOsrm.routes[0];
+                routeInfoAlt = { distanceKm: routeAlt.distance / 1000, durationMin: Math.ceil(routeAlt.duration / 60), geometry: routeAlt.geometry };
+            } else { throw new Error("No hay rutas OSRM"); }
+        } catch (e) {
+            console.warn("OSRM falló. Buscando alternativa en ORS...");
+            const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-hgv?api_key=${orsApiKey}&start=${sedeLng},${sedeLat}&end=${lng},${lat}`;
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const resOrs = await fetch(orsUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (resOrs.ok) {
+                    const dataOrs = await resOrs.json();
+                    if (dataOrs.features && dataOrs.features.length > 0) {
+                        const route = dataOrs.features[0];
+                        routeInfoAlt = { distanceKm: route.properties.summary.distance / 1000, durationMin: Math.ceil(route.properties.summary.duration / 60), geometry: route.geometry };
+                    }
+                }
+            } catch (errorOrs) {
+                if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = "ERROR DE RUTAS";
+                document.getElementById('cajera-tarifa').innerText = "Error";
+                return;
+            }
+        }
+
+        // Guardamos exitosamente la nueva ruta en la memoria RAM temporal
+        window.cacheRutaAlterna = routeInfoAlt;
+    }
+
+    // Renderizamos la ruta alternativa cargada (sea de la API o del caché)
+    if (routeInfoAlt) {
+        renderizarRutaCalculada(routeInfoAlt, '#FF8C00'); // Dibujamos en naranja
+        window.estadoRutaAlterna = true;
+        if(btn) {
+            btn.innerText = "Ruta Original";
+            btn.classList.replace('bg-[#FF8C00]', 'bg-[#39ff14]'); // Cambiamos el botón a verde para indicar cómo volver
+            btn.classList.replace('text-white', 'text-black');
+        }
+    }
+};
+
+// =========================================================
+// --- FUNCIÓN AUXILIAR DE RENDERIZADO VISUAL ---
+// =========================================================
+function renderizarRutaCalculada(routeData, colorHex) {
+    const min = parseFloat(checkoutSede.TARIFA_MINIMA) || 1.5; 
+    let rawPrice = routeData.distanceKm * (parseFloat(checkoutSede.TARIFA_POR_KM) || 1);
+    let decimalPart = rawPrice % 1;
+    let roundedPrice = Math.floor(rawPrice) + (decimalPart >= 0.6 ? 1 : 0);
+
+    // Se asigna a la variable global para que tu sistema de cobros de WhatsApp lo tome
+    tarifaFinalCalculada = Math.max(min, roundedPrice);
+    let displayPrice = (tarifaFinalCalculada % 1 === 0) ? tarifaFinalCalculada.toString() : tarifaFinalCalculada.toFixed(2);
+
+    if(document.getElementById('map-header-title')) document.getElementById('map-header-title').innerText = `${displayPrice}$`;
+    if(document.getElementById('route-km')) document.getElementById('route-km').innerText = `${routeData.distanceKm.toFixed(1)} km`;
+    if(document.getElementById('route-time')) document.getElementById('route-time').innerText = `${routeData.durationMin} min`;
+
+    // Borramos el dibujo de la ruta anterior en Leaflet
+    if (typeof rutaLayer !== 'undefined' && rutaLayer && map) {
+        map.removeLayer(rutaLayer);
+    }
+    
+    // Trazamos la nueva línea
+    rutaLayer = L.geoJSON(routeData.geometry, {
+        style: { color: colorHex, weight: 4, opacity: 0.9, dashArray: '8, 8' }
+    }).addTo(map);
+
+    map.fitBounds(rutaLayer.getBounds(), { padding: [40, 40] });
+    setTimeout(() => { if(map) map.invalidateSize(); }, 300);
+}
+// 8. INICIALIZACIÓN COMPLETA DE LA VISTA ADMIN
+function initAdminDelivery() {
+    isAdminDelivery = true;
+    isManualLocation = true; 
+    
+    const mapWrapper = document.getElementById('map-wrapper');
+    if (!mapWrapper) return;
+    
+    const existingUI = document.getElementById('admin-ui-overlay');
+    if (existingUI) existingUI.remove();
+    
+    document.body.appendChild(mapWrapper);
+
+    Array.from(document.body.children).forEach(child => {
+        if (!['map-wrapper', 'admin-ui-overlay'].includes(child.id) && child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+            child.style.display = 'none';
+        }
+    });
+
+    document.body.style.cssText = "overflow: hidden; margin: 0; padding: 0; background: #e5e3df;";
+    mapWrapper.style.cssText = "position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100dvh !important; z-index: 9999 !important; display: block !important;";
+    
+    const btnWrongLoc = document.getElementById('btn-wrong-location');
+    if (btnWrongLoc) btnWrongLoc.style.display = 'none';
+    
+    const gpsBtn = mapWrapper.querySelector('button[onclick*="getLocation"]');
+    if (gpsBtn) gpsBtn.style.display = 'none';
+    
+    const routeCapsules = mapWrapper.querySelector('.bottom-3.right-3.flex-col');
+    if (routeCapsules) {
+        routeCapsules.style.visibility = 'hidden';
+        routeCapsules.style.opacity = '0';
+    }
+
+    const topPriceMoto = document.getElementById('map-header-title');
+    if (topPriceMoto) {
+        const topContainer = topPriceMoto.closest('.absolute');
+        if (topContainer) {
+            topContainer.style.visibility = 'hidden';
+            topContainer.style.opacity = '0';
+        }
+    }
+    
+    const adminUI = document.createElement('div');
+    adminUI.id = "admin-ui-overlay";
+    adminUI.className = "absolute inset-0 pointer-events-none flex flex-col justify-between z-[10000]";
+    
+    adminUI.innerHTML = `
+        <div class="w-full pointer-events-auto bg-[#0A0A0B]/90 backdrop-blur-md px-3 pb-3 border-b border-white/10 flex flex-col gap-2 rounded-b-3xl shadow-2xl shadow-black/50" style="padding-top: env(safe-area-inset-top);">
+            <div class="flex flex-col md:flex-row gap-2 w-full mt-1">
+                <div class="flex flex-row gap-2 w-full md:w-[40%] items-center">
+                    <button onclick="document.getElementById('extra-inputs').classList.toggle('hidden')" class="md:hidden p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white active:scale-95 transition-all flex-shrink-0">
+                        <span class="material-symbols-outlined text-[20px] block">menu</span>
+                    </button>
+                    
+                    <div class="relative flex items-center flex-1">
+                        <span class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">storefront</span>
+                        <select id="cajera-sede" onchange="cambiarSedeAdmin(this.value)" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-2 py-2.5 text-white text-[11px] md:text-sm focus:outline-none uppercase font-bold appearance-none truncate"></select>
+                    </div>
+
+                    <div class="relative flex items-center flex-1">
+                        <span id="coord-icon" class="material-symbols-outlined absolute left-2 text-white text-[16px] pointer-events-none z-10">explore</span>
+                        <input type="text" id="cajera-coords" placeholder="Coordenadas" onkeydown="if(event.key === 'Enter') actualizarCoordenadasManualAdmin(this.value)" oninput="actualizarIconoCoordenadas()" class="w-full bg-white/10 border border-white/20 rounded-xl pl-8 pr-10 py-2.5 text-white text-[11px] md:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary truncate transition-all">
+                        
+                        <button id="btn-coords-action" onclick="accionCoordenadas()" class="absolute right-1 p-1.5 bg-primary/20 rounded-lg text-primary hover:bg-primary/40 active:scale-95 transition-all z-20">
+                            <span id="action-icon" class="material-symbols-outlined text-[16px] md:text-[20px] block">edit</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="extra-inputs" class="hidden md:flex flex-col md:flex-row gap-2 w-full md:w-[60%]">
+                    <div class="relative flex items-center w-full md:w-1/3">
+                        <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">person</span>
+                        <input type="text" id="cajera-name" placeholder="Nombre de Cliente" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
+                    </div>
+
+                    <div class="relative flex items-center w-full md:w-1/3">
+                        <span class="material-symbols-outlined absolute left-2.5 text-white text-[16px] pointer-events-none">call</span>
+                        <input type="tel" id="cajera-phone" placeholder="Teléfono" class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white text-[11px] md:text-sm focus:outline-none">
+                    </div>
+
+                    <div class="relative flex items-center w-full md:w-1/3">
+                        <span class="material-symbols-outlined absolute left-2.5 text-[#39FF14] text-[16px] pointer-events-none">location_on</span>
+                        <input type="text" id="cajera-zona" placeholder="Zona" readonly class="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-[#39FF14] text-[11px] md:text-sm font-bold focus:outline-none cursor-not-allowed text-center truncate">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="admin-pin-controls" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 flex gap-3 pointer-events-auto" style="display:none; z-index: 10001;">
+            <button onclick="cancelarPinAdmin()" class="bg-red-600 text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Cancelar</button>
+            <button onclick="aceptarPinAdmin()" class="bg-primary text-white font-black px-6 py-2 md:py-3 md:px-8 rounded-full shadow-2xl active:scale-95 border border-white/20 uppercase text-[11px] md:text-sm tracking-widest">Aceptar</button>
+        </div>
+        <div class="absolute bottom-0 w-full pointer-events-none px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2 md:gap-4 md:mb-4">
+            <div class="flex gap-2 mx-auto w-full max-w-[340px] md:max-w-2xl">
+                <div class="w-1/3 bg-[#0A0A0B]/95 backdrop-blur-md rounded-xl py-1.5 md:py-3 text-center border border-white/10 shadow-lg">
+                    <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Tiempo</p>
+                    <span id="cajera-tiempo" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
+                </div>
+                <div class="w-1/3 bg-[#0A0A0B]/95 backdrop-blur-md rounded-xl py-1.5 md:py-3 text-center border border-white/10 shadow-lg">
+                    <p class="text-[8px] md:text-[10px] uppercase text-gray-400 font-bold tracking-wider">Distancia</p>
+                    <span id="cajera-km" class="text-white font-bold text-[11px] md:text-base truncate block px-1">--</span>
+                </div>
+                <div class="w-1/3 bg-[#0A0A0B]/95 backdrop-blur-md rounded-xl py-1.5 md:py-3 text-center border border-[#39ff14]/30 shadow-lg">
+                    <p class="text-[8px] md:text-[10px] uppercase text-[#39ff14] font-bold tracking-wider">Tarifa</p>
+                    <span id="cajera-tarifa" class="text-white font-black text-[11px] md:text-base truncate block px-1">--</span>
+                </div>
+            </div>
+            <div class="flex gap-2 pointer-events-auto mx-auto w-full max-w-[340px] md:max-w-2xl">
+                <button onclick="calcularRutaAlternativaAdmin()" class="w-1/2 bg-[#FF8C00] py-3 md:py-4 md:text-sm rounded-xl font-black text-white shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Ruta Alterna</button>
+                <button onclick="confirmarDeliveryAdminSheet()" class="w-1/2 bg-[#39ff14] py-3 md:py-4 md:text-sm rounded-xl font-black text-black shadow-lg active:scale-95 transition-transform text-[11px] uppercase tracking-wider">Enviar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(adminUI);
+
+    if (typeof map === 'undefined' || map === null) {
+        initLeafletMap();
+    }
+
+    const loadDataInterval = setInterval(() => {
+        if (db && db.sedes && db.sedes.length > 0) {
+            if (!checkoutSede) checkoutSede = currentSede || db.sedes[0];
+            
+            if (typeof window.updateCheckoutSede === 'function' && !window.updateCheckoutSede.isIntercepted) {
+                const originalUpdate = window.updateCheckoutSede;
+                window.updateCheckoutSede = async function(id) {
+                    if (isAdminDelivery) {
+                        await window.cambiarSedeAdmin(id);
+                    } else {
+                        originalUpdate(id);
+                    }
+                };
+                window.updateCheckoutSede.isIntercepted = true;
+            }
+
+            const selectSedeAdmin = document.getElementById('cajera-sede');
+            if(selectSedeAdmin) {
+                selectSedeAdmin.innerHTML = db.sedes.map(s => `<option value="${s.ID_SEDE}" style="background-color: #1A1A1A; color: #FFFFFF;">${s.NOMBRE_SEDE.split(',')[0]}</option>`).join('');
+                selectSedeAdmin.value = checkoutSede.ID_SEDE;
+            }
+
+            if(typeof map !== 'undefined' && map !== null) {
+                setTimeout(async () => {
+                    map.invalidateSize();
+                    if (checkoutSede && checkoutSede.COORDENADAS_SEDE) {
+                        const [sLat, sLng] = checkoutSede.COORDENADAS_SEDE.split(',').map(Number);
+                        map.setView([sLat, sLng], 13);
+                        
+                        const currentCoords = document.getElementById('cajera-coords').value;
+                        if (currentCoords) {
+                            const [cLat, cLng] = currentCoords.split(',').map(Number);
+                            isManualLocation = true;
+                            await renderMapPosition(cLat, cLng, true);
+                        } else {
+                            if (typeof userMarker !== 'undefined' && userMarker) { try { map.removeLayer(userMarker); } catch(e){} userMarker = null; }
+                            if (typeof rutaLayer !== 'undefined' && rutaLayer) { try { map.removeLayer(rutaLayer); } catch(e){} rutaLayer = null; }
+                            
+                            // Muestra todas las sedes del mapa desde el arranque inicial limpio
+                            window.dibujarSedesEnMapa();
+                        }
+                    }
+                }, 100);
+            }
+            clearInterval(loadDataInterval); 
+        }
+    }, 300);
+    
+    setTimeout(() => clearInterval(loadDataInterval), 10000);
+}
+// =========================================================
+// --- FIN LÓGICA VISTA ADMIN CAJERA DELIVERY ---
+// =========================================================
+function resetAppAndGPS() {
+        alert("Instrucciones para reactivar el GPS:\n1. Toca el candado o ícono de ajustes en la barra de direcciones del navegador.\n2. Ve a 'Permisos' y activa la 'Ubicación' exacta.\n3. La página se recargará a continuación.");
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+            window.location.reload(true);
+        });
+    }
+    
+    init();
+
+    // =========================================================
+    // NUEVO: INTERCEPTOR DE ARRANQUE PARA EL PANEL ADMIN
+    // =========================================================
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        // Si el enlace tiene la clave secreta, abre la vista Cajera
+        if (urlParams.has('DeliveryAdmin8382727282891')) {
+            setTimeout(() => initAdminDelivery(), 800);
+        }
+    });
+    // Lógica del botón de coordenadas
+function actualizarIconoCoordenadas() {
+    const input = document.getElementById('cajera-coords');
+    const icon = document.getElementById('action-icon');
+    const btn = document.getElementById('btn-coords-action');
+    
+    if (input.value.trim().length > 0) {
+        icon.innerText = 'close';
+        btn.classList.replace('bg-primary/20', 'bg-red-500/20');
+        btn.classList.replace('text-primary', 'text-red-500');
+    } else {
+        icon.innerText = 'edit';
+        btn.classList.replace('bg-red-500/20', 'bg-primary/20');
+        btn.classList.replace('text-red-500', 'text-primary');
+    }
+}
+
+function accionCoordenadas() {
+    const input = document.getElementById('cajera-coords');
+    const icon = document.getElementById('action-icon');
+
+    if (icon.innerText === 'close') {
+        // Limpiar todo
+        input.value = '';
+        actualizarIconoCoordenadas();
+        document.getElementById('cajera-zona').value = "";
+        
+        if (typeof userMarker !== 'undefined' && userMarker) { try { map.removeLayer(userMarker); } catch(e){} userMarker = null; }
+        if (typeof rutaLayer !== 'undefined' && rutaLayer) { try { map.removeLayer(rutaLayer); } catch(e){} rutaLayer = null; }
+        window.dibujarSedesEnMapa();
+    } else {
+        window.activarPinAdmin();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<div class="modal" id="scanner-modal">
+    <div class="modal-overlay" onclick="closeScannerModal()"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour mx-4" style="background: #0A0A0B; max-width: 350px; margin: auto;">
+        
+        <div class="flex items-center justify-between w-full mb-4">
+            <h3 class="text-xl font-black text-white uppercase tracking-tighter">Escanear Producto</h3>
+            <button type="button" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90" onclick="closeScannerModal()">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
+
+        <div id="reader" class="w-full rounded-2xl overflow-hidden bg-black/20 border border-white/10 shadow-inner"></div>
+        
+        <div class="flex items-center justify-center gap-6 mt-4">
+            <button type="button" id="btn-toggle-camera" onclick="switchScannerCamera()" class="w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all">
+                <span class="material-symbols-outlined text-[24px]">cameraswitch</span>
+            </button>
+            
+            <button type="button" id="btn-toggle-flash" onclick="toggleScannerFlash()" class="w-12 h-12 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-lg transition-all">
+                <span id="flash-icon" class="material-symbols-outlined text-[24px]">flash_off</span>
+            </button>
+        </div>
+
+        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-4">Apunta al código de barras</p>
+    </div>
+</div>
+
+<div class="modal" id="share-modal">
+    <div class="modal-overlay" onclick="toggleModal('share-modal', false)"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour mx-4" style="background: #0A0A0B; max-width: 320px; margin: auto;">
+        
+        <div class="flex items-center justify-between w-full mb-4">
+            <h3 class="text-xl font-black text-white uppercase tracking-tighter" id="share-modal-title">Compartir</h3>
+            <button type="button" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90" onclick="toggleModal('share-modal', false)">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
+
+        <div class="bg-white p-3 rounded-3xl mb-5 w-[200px] h-[200px] flex items-center justify-center shadow-[0_0_25px_rgba(255,255,255,0.15)] relative">
+            <div class="absolute inset-0 border-4 border-white rounded-3xl"></div>
+            <img id="share-qr-img" src="" alt="QR Code" class="w-full h-full object-contain rounded-xl">
+        </div>
+
+        <div class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 mb-4 flex items-center gap-2">
+            <div class="overflow-x-auto hide-scrollbar flex-1 text-[11px] font-bold text-zinc-300 whitespace-nowrap text-left px-2" id="share-link-text"></div>
+            <button onclick="copyShareLink()" class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white flex-shrink-0 active:scale-90 shadow-lg shadow-primary/30">
+                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+            </button>
+        </div>
+
+        <button onclick="nativeShare()" id="btn-native-share" class="w-full bg-white/10 text-white font-black py-3.5 rounded-xl text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all border border-white/10">
+            Compartir Enlace <span class="material-symbols-outlined text-[18px]">share</span>
+        </button>
+    </div>
+</div>
+
+<div class="modal" id="welcome-modal">
+    <div class="modal-overlay" onclick="toggleModal('welcome-modal', false); setTimeout(triggerFoodRain, 600);"></div>
+    <div class="modal-content flex flex-col items-center p-6 text-center glass-contour" style="background: #0A0A0B;">
+        <span class="text-5xl mb-4">📢</span>
+        <h3 class="text-2xl font-black text-white uppercase tracking-tighter mb-2">¡Bienvenido!</h3>
+        <p id="welcome-message-text" class="text-zinc-300 text-sm mb-6 font-medium leading-relaxed"></p>
+        <button onclick="toggleModal('welcome-modal', false); setTimeout(triggerFoodRain, 600);" class="w-full bg-primary text-white font-[900] py-3.5 rounded-2xl text-sm uppercase shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">Entendido</button>
+    </div>
+</div>
+</body>
+</html>
