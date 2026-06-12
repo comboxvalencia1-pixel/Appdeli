@@ -3075,7 +3075,7 @@ return `<div class="cart-item-container relative overflow-hidden flex items-cent
         openShareModal(url, 'Buzón de Sugerencias');
     }
     
-   function openProductView(id) {
+  window.openProductView = function(id) {
     requestAnimationFrame(() => {
         const p = getAllSourceData().find(x => getUnifiedId(x) === id);
         if (!p) return;
